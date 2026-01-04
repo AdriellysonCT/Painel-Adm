@@ -224,8 +224,8 @@ export default function RepassesDashboardClient({
             // refresh
             setConfirmOpen(false)
             setSelected(null)
-            // Recarregar
-            setModo(modo => modo) // trigger useEffect
+            // Recarregar - força re-fetch dos dados
+            window.location.reload()
         } catch (e) {
             console.error(e)
         } finally {
