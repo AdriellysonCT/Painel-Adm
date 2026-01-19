@@ -128,12 +128,9 @@ export default function RepassesDashboardClient({
                 }
             }
             
-            // Filtrar apenas entregadores com saldo > 0 ou que já tiveram movimentações
+            // Mostrar todos os entregadores que tiveram movimentações
             const idsComMovimentacao = [...new Set(allRows.map(r => r.id_usuario))]
-            const ids = idsComMovimentacao.filter(id => {
-                const saldo = saldos.get(id) || 0
-                return saldo !== 0 // Mostrar se tem saldo positivo ou negativo (teve atividade)
-            })
+            const ids = idsComMovimentacao // Mostrar todos, independente do saldo
             
             let nomesMap = new Map<string, string>()
             if (ids.length > 0) {
