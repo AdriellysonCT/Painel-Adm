@@ -345,33 +345,49 @@ export default function RepassesDashboardClient({
 
             {/* Dialog Detalhes */}
             <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-4xl w-[90vw] max-h-[85vh] flex flex-col">
                     <DialogHeader>
-                        <DialogTitle>Histórico de {modo === 'restaurante' ? 'Restaurante' : 'Entregador'} {selected?.nome}</DialogTitle>
+                        <DialogTitle className="text-lg font-semibold">
+                            Histórico de {modo === 'restaurante' ? 'Restaurante' : 'Entregador'}: {selected?.nome}
+                        </DialogTitle>
                     </DialogHeader>
-                    <div className="overflow-x-auto max-h-[60vh]">
+                    <div className="flex-1 overflow-auto border rounded-md">
                         <Table>
-                            <TableHeader>
+                            <TableHeader className="sticky top-0 bg-background z-10">
                                 <TableRow>
-                                    <TableHead>Data</TableHead>
-                                    <TableHead>Descrição</TableHead>
-                                    <TableHead>Valor</TableHead>
-                                    <TableHead>Status</TableHead>
+                                    <TableHead className="w-[180px]">Data</TableHead>
+                                    <TableHead className="min-w-[200px]">Descrição</TableHead>
+                                    <TableHead className="w-[120px] text-right">Valor</TableHead>
+                                    <TableHead className="w-[100px]">Status</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {(historico || []).map((m, idx) => (
-                                    <TableRow key={idx}>
-                                        <TableCell>{m.criado_em ? new Date(m.criado_em).toLocaleString('pt-BR') : '—'}</TableCell>
-                                        <TableCell className="whitespace-nowrap max-w-[280px] truncate" title={m.descricao || ''}>{m.descricao || '—'}</TableCell>
-                                        <TableCell>{formatCurrencyBRL(m.valor || 0)}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={m.status === 'pago' ? 'default' : m.status === 'pendente' ? 'destructive' : 'secondary'}>
-                                                {m.status || '—'}
-                                            </Badge>
+                                {(historico || []).length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                                            Nenhuma movimentação encontrada
                                         </TableCell>
                                     </TableRow>
-                                ))}
+                                ) : (
+                                    (historico || []).map((m, idx) => (
+                                        <TableRow key={idx}>
+                                            <TableCell className="whitespace-nowrap">
+                                                {m.criado_em ? new Date(m.criado_em).toLocaleString('pt-BR') : '—'}
+                                            </TableCell>
+                                            <TableCell className="max-w-[300px]" title={m.descricao || ''}>
+                                                {m.descricao || '—'}
+                                            </TableCell>
+                                            <TableCell className="text-right font-medium">
+                                                {formatCurrencyBRL(m.valor || 0)}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant={m.status === 'pago' ? 'default' : m.status === 'pendente' ? 'destructive' : 'secondary'}>
+                                                    {m.status || '—'}
+                                                </Badge>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
                             </TableBody>
                         </Table>
                     </div>
@@ -380,24 +396,44 @@ export default function RepassesDashboardClient({
 
             {/* Dialog Confirmar pagamento */}
             <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-                <DialogContent>
+                <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Confirmar repasse</DialogTitle>
+                        <DialogTitle className="text-lg font-semibold">Confirmar repasse</DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-3">
-                        <div className="text-sm text-muted-foreground">{selected?.nome}</div>
-                        <div className="grid gap-1">
-                            <Label>Valor</Label>
-                            <Input type="number" step="0.01" value={confirmValor} onChange={(e)=>setConfirmValor(parseFloat(e.target.value || '0'))} />
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <div className="text-sm text-muted-foreground">
+                                {modo === 'restaurante' ? 'Restaurante' : 'Entregador'}
+                            </div>
+                            <div className="text-base font-medium">{selected?.nome}</div>
                         </div>
-                        <div className="grid gap-1">
-                            <Label>Observação (opcional)</Label>
-                            <Input value={observacao} onChange={(e)=>setObservacao(e.target.value)} />
+                        <div className="grid gap-2">
+                            <Label htmlFor="valor-repasse">Valor do repasse</Label>
+                            <Input 
+                                id="valor-repasse"
+                                type="number" 
+                                step="0.01" 
+                                min="0"
+                                value={confirmValor} 
+                                onChange={(e)=>setConfirmValor(parseFloat(e.target.value || '0'))} 
+                                className="text-lg"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="observacao-repasse">Observação (opcional)</Label>
+                            <Input 
+                                id="observacao-repasse"
+                                value={observacao} 
+                                onChange={(e)=>setObservacao(e.target.value)}
+                                placeholder="Ex: Pix realizado, comprovante enviado..."
+                            />
                         </div>
                     </div>
-                    <DialogFooter>
+                    <DialogFooter className="gap-2">
                         <Button variant="outline" onClick={()=>setConfirmOpen(false)}>Cancelar</Button>
-                        <Button onClick={confirmarPagamento} disabled={confirmLoading || confirmValor <= 0}>{confirmLoading ? 'Confirmando…' : 'Confirmar'}</Button>
+                        <Button onClick={confirmarPagamento} disabled={confirmLoading || confirmValor <= 0}>
+                            {confirmLoading ? 'Confirmando…' : 'Confirmar Pagamento'}
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
