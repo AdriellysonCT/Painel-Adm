@@ -345,7 +345,16 @@ export default function RepassesDashboardClient({
 
             {/* Dialog Detalhes */}
             <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-                <DialogContent className="max-w-4xl w-[90vw] max-h-[85vh] flex flex-col">
+                <DialogContent 
+                    className="max-w-4xl w-[90vw] max-h-[85vh] flex flex-col"
+                    style={{
+                        position: 'fixed',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        margin: 0
+                    }}
+                >
                     <DialogHeader>
                         <DialogTitle className="text-lg font-semibold">
                             Histórico de {modo === 'restaurante' ? 'Restaurante' : 'Entregador'}: {selected?.nome}
@@ -396,7 +405,16 @@ export default function RepassesDashboardClient({
 
             {/* Dialog Confirmar pagamento */}
             <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-                <DialogContent className="max-w-md">
+                <DialogContent 
+                    className="max-w-md"
+                    style={{
+                        position: 'fixed',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        margin: 0
+                    }}
+                >
                     <DialogHeader>
                         <DialogTitle className="text-lg font-semibold">Confirmar repasse</DialogTitle>
                     </DialogHeader>

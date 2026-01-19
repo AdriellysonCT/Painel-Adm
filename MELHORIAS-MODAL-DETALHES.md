@@ -3,7 +3,33 @@
 ## Data: 19/01/2026
 
 ## Problema Identificado
-O modal "Ver detalhes" abria muito pequeno e mal posicionado, dificultando a visualização das informações.
+O modal "Ver detalhes" abria no canto superior esquerdo da tela ao invés de centralizado, dificultando muito a visualização das informações.
+
+## Causa Raiz
+O componente `Dialog` do shadcn/ui estava usando `translate-x-[-50%] translate-y-[-50%]` como classes Tailwind, que podem ser sobrescritas ou ter conflitos com outros estilos. O posicionamento não estava sendo aplicado corretamente.
+
+## Solução Implementada
+
+### 1. Correção no Componente Dialog Base
+**Arquivo**: `admin-panel/src/components/ui/dialog.tsx`
+
+- Removido `translate-x-[-50%] translate-y-[-50%]` das classes Tailwind
+- Adicionado `transform: 'translate(-50%, -50%)'` como estilo inline
+- Estilos inline têm maior especificidade e não são sobrescritos
+
+### 2. Reforço nos Modais Específicos
+**Arquivo**: `admin-panel/src/app/dashboard/repasses-dashboard-client.tsx`
+
+Adicionado estilos inline forçados em ambos os modais:
+```tsx
+style={{
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    margin: 0
+}}
+```
 
 ## Melhorias Implementadas
 
@@ -13,6 +39,7 @@ O modal "Ver detalhes" abria muito pequeno e mal posicionado, dificultando a vis
 - Sem controle de largura responsiva
 - Altura fixa `max-h-[60vh]`
 - Tabela sem cabeçalho fixo
+- **Abria no canto da tela** ❌
 
 **Depois:**
 - ✅ `max-w-4xl w-[90vw]` - Muito mais espaço
@@ -27,12 +54,14 @@ O modal "Ver detalhes" abria muito pequeno e mal posicionado, dificultando a vis
   - Status: 100px
 - ✅ Mensagem quando não há movimentações
 - ✅ Título mais descritivo
+- ✅ **Centralizado perfeitamente na tela** ✨
 
 ### 2. Modal de Confirmação de Pagamento
 **Antes:**
 - Layout básico
 - Labels simples
 - Sem placeholder
+- **Abria no canto da tela** ❌
 
 **Depois:**
 - ✅ `max-w-md` - Tamanho adequado
@@ -43,60 +72,69 @@ O modal "Ver detalhes" abria muito pequeno e mal posicionado, dificultando a vis
 - ✅ Placeholder no campo de observação
 - ✅ Botão com texto mais descritivo
 - ✅ Gap entre botões no footer
+- ✅ **Centralizado perfeitamente na tela** ✨
 
 ## Resultado Visual
 
-### Modal de Detalhes:
+### Modal de Detalhes (Centralizado):
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Histórico de Entregador: Nome                        [X]   │
-├─────────────────────────────────────────────────────────────┤
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │ Data          │ Descrição        │ Valor    │ Status │  │ ← Fixo
-│  ├───────────────────────────────────────────────────────┤  │
-│  │ 19/01 10:30   │ Entrega concluída│ R$ 5,00  │ ●●●●● │  │
-│  │ 18/01 15:20   │ Entrega concluída│ R$ 5,00  │ ●●●●● │  │ ← Scroll
-│  │ 17/01 09:15   │ Entrega concluída│ R$ 5,00  │ ●●●●● │  │
-│  └───────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
+                    ┌─────────────────────────────────────────────────────────────┐
+                    │  Histórico de Entregador: Nome                        [X]   │
+                    ├─────────────────────────────────────────────────────────────┤
+                    │  ┌───────────────────────────────────────────────────────┐  │
+                    │  │ Data          │ Descrição        │ Valor    │ Status │  │ ← Fixo
+                    │  ├───────────────────────────────────────────────────────┤  │
+                    │  │ 19/01 10:30   │ Entrega concluída│ R$ 5,00  │ ●●●●● │  │
+                    │  │ 18/01 15:20   │ Entrega concluída│ R$ 5,00  │ ●●●●● │  │ ← Scroll
+                    │  │ 17/01 09:15   │ Entrega concluída│ R$ 5,00  │ ●●●●● │  │
+                    │  └───────────────────────────────────────────────────────┘  │
+                    └─────────────────────────────────────────────────────────────┘
 ```
 
-### Modal de Confirmação:
+### Modal de Confirmação (Centralizado):
 ```
-┌──────────────────────────────────────┐
-│  Confirmar repasse            [X]    │
-├──────────────────────────────────────┤
-│  Entregador                          │
-│  Nome do Entregador                  │
-│                                      │
-│  Valor do repasse                    │
-│  [    R$ 15,00    ]                  │
-│                                      │
-│  Observação (opcional)               │
-│  [Ex: Pix realizado...]              │
-│                                      │
-│  [Cancelar] [Confirmar Pagamento]    │
-└──────────────────────────────────────┘
+                              ┌──────────────────────────────────────┐
+                              │  Confirmar repasse            [X]    │
+                              ├──────────────────────────────────────┤
+                              │  Entregador                          │
+                              │  Nome do Entregador                  │
+                              │                                      │
+                              │  Valor do repasse                    │
+                              │  [    R$ 15,00    ]                  │
+                              │                                      │
+                              │  Observação (opcional)               │
+                              │  [Ex: Pix realizado...]              │
+                              │                                      │
+                              │  [Cancelar] [Confirmar Pagamento]    │
+                              └──────────────────────────────────────┘
 ```
 
 ## Benefícios
 
-1. **Melhor Visualização**: Modal ocupa 90% da largura da tela (até 4xl)
-2. **Mais Informações Visíveis**: Altura de 85vh permite ver mais registros
-3. **Navegação Facilitada**: Cabeçalho fixo mantém contexto durante scroll
-4. **Responsivo**: Adapta-se bem a diferentes tamanhos de tela
-5. **Acessibilidade**: Labels com htmlFor, placeholders descritivos
-6. **UX Melhorada**: Textos mais claros e informativos
+1. **Centralização Perfeita**: Modal sempre aparece no centro da tela ✨
+2. **Melhor Visualização**: Modal ocupa 90% da largura da tela (até 4xl)
+3. **Mais Informações Visíveis**: Altura de 85vh permite ver mais registros
+4. **Navegação Facilitada**: Cabeçalho fixo mantém contexto durante scroll
+5. **Responsivo**: Adapta-se bem a diferentes tamanhos de tela
+6. **Acessibilidade**: Labels com htmlFor, placeholders descritivos
+7. **UX Melhorada**: Textos mais claros e informativos
+8. **Consistência**: Todos os modais agora seguem o mesmo padrão
 
 ## Arquivos Alterados
 
-- `admin-panel/src/app/dashboard/repasses-dashboard-client.tsx`
-  - Modal de detalhes expandido e melhorado
-  - Modal de confirmação com melhor layout
-  - Mensagens de estado vazio
+1. **`admin-panel/src/components/ui/dialog.tsx`**
+   - Corrigido posicionamento do DialogContent
+   - Transform movido para style inline
+
+2. **`admin-panel/src/app/dashboard/repasses-dashboard-client.tsx`**
+   - Modal de detalhes expandido e melhorado
+   - Modal de confirmação com melhor layout
+   - Estilos inline forçados para garantir centralização
+   - Mensagens de estado vazio
 
 ## Componentes Utilizados
 
-- Dialog (Radix UI) - já estava centralizado corretamente
+- Dialog (Radix UI) - corrigido para centralização perfeita
 - Table com cabeçalho sticky
 - Layout flexível para melhor controle de espaço
+- Estilos inline para maior especificidade
