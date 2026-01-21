@@ -174,7 +174,7 @@ function HistoricoTable({ items, density, showValor, showData, showStatus, modo 
                         <TableRow key={h.id_movimentacao || Math.random()} className={density==='compact' ? 'text-sm' : ''}>
                             <TableCell>#{h.id_movimentacao || '—'}</TableCell>
                             <TableCell>{h.restaurantes_app?.nome_fantasia || `#${h.id_usuario}`}</TableCell>
-                            {isRestaurante && <TableCell className="capitalize">{h.tipo || '—'}</TableCell>}
+                            {isRestaurante && <TableCell className="capitalize">{h.tipo_pedido || '—'}</TableCell>}
                             {showValor && <TableCell>{formatCurrencyBRL(h.valor || 0)}</TableCell>}
                             {showData && <TableCell>{h.criado_em ? new Date(h.criado_em).toLocaleDateString('pt-BR') : '—'}</TableCell>}
                             {showStatus && <TableCell><StatusBadge status={h.status || undefined} /></TableCell>}

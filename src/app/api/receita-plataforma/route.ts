@@ -6,11 +6,22 @@ export async function GET() {
         const supabase = createServerClient()
         
         // Buscar receita diária
-        const { data: receitaDiaria, error: errorDiaria } = await supabase
+        const { data: receitaDiariaRaw, error: errorDiaria } = await supabase
             .from('view_receita_plataforma')
             .select('*')
             .order('data', { ascending: false })
             .limit(30) // Últimos 30 dias
+        
+        // Converter strings para números
+        const receitaDiaria = (receitaDiariaRaw || []).map(r => ({
+            ...r,
+            qtd_pedidos: parseInt(r.qtd_pedidos) || 0,
+            qtd_itens_total: parseInt(r.qtd_itens_total) || 0,
+            receita_dia: parseFloat(r.receita_dia) || 0,
+            taxa_media_pedido: parseFloat(r.taxa_media_pedido) || 0,
+            valor_restaurantes: parseFloat(r.valor_restaurantes) || 0,
+            valor_entregadores: parseFloat(r.valor_entregadores) || 0
+        }))
         
         if (errorDiaria) {
             console.error('❌ Erro ao buscar receita diária:', errorDiaria)
@@ -41,7 +52,7 @@ export async function GET() {
             const mesAnterior = mesAtual === 0 ? 11 : mesAtual - 1
             const anoMesAnterior = mesAtual === 0 ? anoAtual - 1 : anoAtual
             
-            resumo.receita_total = receitaDiaria.reduce((acc, r) => acc + parseFloat(r.receita_dia || 0), 0)
+            resumo.receita_total = receitaDiaria.reduce((acc, r) => acc + (r.receita_dia || 0), 0)
             resumo.qtd_pedidos_total = receitaDiaria.reduce((acc, r) => acc + (r.qtd_pedidos || 0), 0)
             
             // Receita do mês atual
@@ -49,7 +60,7 @@ export async function GET() {
                 const data = new Date(r.data)
                 return data.getMonth() === mesAtual && data.getFullYear() === anoAtual
             })
-            resumo.receita_mes_atual = receitaMesAtual.reduce((acc, r) => acc + parseFloat(r.receita_dia || 0), 0)
+            resumo.receita_mes_atual = receitaMesAtual.reduce((acc, r) => acc + (r.receita_dia || 0), 0)
             resumo.qtd_pedidos_mes = receitaMesAtual.reduce((acc, r) => acc + (r.qtd_pedidos || 0), 0)
             
             // Receita do mês anterior
@@ -57,7 +68,7 @@ export async function GET() {
                 const data = new Date(r.data)
                 return data.getMonth() === mesAnterior && data.getFullYear() === anoMesAnterior
             })
-            resumo.receita_mes_anterior = receitaMesAnterior.reduce((acc, r) => acc + parseFloat(r.receita_dia || 0), 0)
+            resumo.receita_mes_anterior = receitaMesAnterior.reduce((acc, r) => acc + (r.receita_dia || 0), 0)
             
             // Taxa média
             resumo.taxa_media = resumo.qtd_pedidos_total > 0 
@@ -72,11 +83,19 @@ export async function GET() {
         }
         
         // Buscar top restaurantes por taxa gerada
-        const { data: topRestaurantes, error: errorTop } = await supabase
+        const { data: topRestaurantesRaw, error: errorTop } = await supabase
             .from('view_resumo_repasses_restaurante')
             .select('nome_fantasia, total_taxa_plataforma, qtd_pedidos, qtd_itens_total')
             .order('total_taxa_plataforma', { ascending: false })
             .limit(10)
+        
+        // Converter strings para números
+        const topRestaurantes = (topRestaurantesRaw || []).map(r => ({
+            ...r,
+            total_taxa_plataforma: parseFloat(r.total_taxa_plataforma) || 0,
+            qtd_pedidos: parseInt(r.qtd_pedidos) || 0,
+            qtd_itens_total: parseInt(r.qtd_itens_total) || 0
+        }))
         
         console.log('✅ Receita da plataforma:', {
             receita_total: resumo.receita_total,
