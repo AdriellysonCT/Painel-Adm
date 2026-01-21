@@ -4,12 +4,13 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Download, LayoutDashboard, Receipt, Wallet } from "lucide-react"
+import { Download, LayoutDashboard, Receipt, Wallet, TrendingUp } from "lucide-react"
 import RepassesDashboardClient from './repasses-dashboard-client'
 import ResumoClient from './resumo-client'
 import HistoricoClient from './historico-client'
 import FechamentosClient from './fechamentos-client'
 import PagamentosPendentesClient from './pagamentos-pendentes-client'
+import ReceitaPlataformaClient from './receita-plataforma-client'
 
 type Modo = 'restaurante' | 'entregador'
 
@@ -20,7 +21,7 @@ export default function DashboardWrapperClient() {
 
     return (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full max-w-[600px] grid-cols-3 mb-6">
+            <TabsList className="grid w-full max-w-[800px] grid-cols-4 mb-6">
                 <TabsTrigger value="dashboard" className="gap-2">
                     <LayoutDashboard className="h-4 w-4" />
                     Dashboard
@@ -28,6 +29,10 @@ export default function DashboardWrapperClient() {
                 <TabsTrigger value="pagamentos" className="gap-2">
                     <Wallet className="h-4 w-4" />
                     Pagamentos
+                </TabsTrigger>
+                <TabsTrigger value="receita" className="gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    Receita
                 </TabsTrigger>
                 <TabsTrigger value="fechamentos" className="gap-2">
                     <Receipt className="h-4 w-4" />
@@ -90,6 +95,10 @@ export default function DashboardWrapperClient() {
 
             <TabsContent value="pagamentos">
                 <PagamentosPendentesClient />
+            </TabsContent>
+
+            <TabsContent value="receita">
+                <ReceitaPlataformaClient />
             </TabsContent>
 
             <TabsContent value="fechamentos">
