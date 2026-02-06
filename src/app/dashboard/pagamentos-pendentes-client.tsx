@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Copy, CheckCircle2, Clock, AlertTriangle, RefreshCw } from "lucide-react"
+import { Copy, CheckCircle2, Clock, AlertTriangle, RefreshCw, XCircle } from "lucide-react"
 import { formatCurrencyBRL } from "@/components/format"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
@@ -52,6 +52,17 @@ export default function PagamentosPendentesClient() {
     const [observacao, setObservacao] = useState("")
     const [copiado, setCopiado] = useState<string | null>(null)
     const [filtro, setFiltro] = useState<'todos' | 'entregador' | 'restaurante'>('todos')
+    const [feedbackDialog, setFeedbackDialog] = useState<{
+        open: boolean
+        tipo: 'sucesso' | 'erro'
+        titulo: string
+        mensagem: string
+    }>({
+        open: false,
+        tipo: 'sucesso',
+        titulo: '',
+        mensagem: ''
+    })
 
     const carregarDados = async (tipoFiltro?: 'todos' | 'entregador' | 'restaurante') => {
         setLoading(true)
@@ -114,6 +125,7 @@ export default function PagamentosPendentesClient() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     id_entregador: entregadorSelecionado.id,
+                    tipo_usuario: entregadorSelecionado.tipo_usuario,
                     valor: entregadorSelecionado.saldo_disponivel,
                     chave_pix: entregadorSelecionado.chave_pix,
                     observacao
@@ -123,7 +135,12 @@ export default function PagamentosPendentesClient() {
             const dataProcessar = await resProcessar.json()
             
             if (!resProcessar.ok) {
-                alert(`Erro ao processar: ${dataProcessar.error}`)
+                setFeedbackDialog({
+                    open: true,
+                    tipo: 'erro',
+                    titulo: 'Erro ao processar',
+                    mensagem: dataProcessar.error || 'Não foi possível processar o pagamento'
+                })
                 return
             }
             
@@ -139,12 +156,22 @@ export default function PagamentosPendentesClient() {
             const dataConfirmar = await resConfirmar.json()
             
             if (!resConfirmar.ok) {
-                alert(`Erro ao confirmar: ${dataConfirmar.error}`)
+                setFeedbackDialog({
+                    open: true,
+                    tipo: 'erro',
+                    titulo: 'Erro ao confirmar',
+                    mensagem: dataConfirmar.error || 'Não foi possível confirmar o pagamento'
+                })
                 return
             }
             
             // Sucesso!
-            alert(`✅ Pagamento confirmado com sucesso!\n\nValor: ${formatCurrencyBRL(entregadorSelecionado.saldo_disponivel)}\nEntregador: ${entregadorSelecionado.nome}`)
+            setFeedbackDialog({
+                open: true,
+                tipo: 'sucesso',
+                titulo: 'Pagamento confirmado!',
+                mensagem: `Pagamento de ${formatCurrencyBRL(entregadorSelecionado.saldo_disponivel)} para ${entregadorSelecionado.nome} foi processado com sucesso.`
+            })
             
             setDialogOpen(false)
             setEntregadorSelecionado(null)
@@ -155,7 +182,12 @@ export default function PagamentosPendentesClient() {
             
         } catch (error) {
             console.error('Erro ao processar pagamento:', error)
-            alert('Erro inesperado ao processar pagamento')
+            setFeedbackDialog({
+                open: true,
+                tipo: 'erro',
+                titulo: 'Erro inesperado',
+                mensagem: error instanceof Error ? error.message : 'Ocorreu um erro inesperado ao processar o pagamento'
+            })
         } finally {
             setProcessando(null)
         }
@@ -261,7 +293,7 @@ export default function PagamentosPendentesClient() {
                         <Clock className="h-5 w-5 text-red-600" />
                         <CardTitle>Pagamentos de Hoje ({hoje.length})</CardTitle>
                     </div>
-                    <Button variant="outline" size="sm" onClick={carregarDados}>
+                    <Button variant="outline" size="sm" onClick={() => carregarDados()}>
                         <RefreshCw className="h-4 w-4 mr-2" />
                         Atualizar
                     </Button>
@@ -386,10 +418,10 @@ export default function PagamentosPendentesClient() {
 
             {/* Dialog de Confirmação */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-[500px] w-[95%] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>Confirmar Pagamento</DialogTitle>
-                        <DialogDescription>
+                        <DialogTitle className="text-xl font-bold">Confirmar Pagamento</DialogTitle>
+                        <DialogDescription className="text-sm">
                             Você está prestes a processar um pagamento. Verifique os dados antes de confirmar.
                         </DialogDescription>
                     </DialogHeader>
@@ -443,6 +475,41 @@ export default function PagamentosPendentesClient() {
                             disabled={processando !== null}
                         >
                             {processando ? 'Processando...' : 'Confirmar Pagamento'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog de Feedback */}
+            <Dialog open={feedbackDialog.open} onOpenChange={(open) => setFeedbackDialog(prev => ({ ...prev, open }))}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <div className="flex items-center gap-3">
+                            {feedbackDialog.tipo === 'sucesso' ? (
+                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
+                                    <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                                </div>
+                            ) : (
+                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                                    <XCircle className="h-6 w-6 text-red-600" />
+                                </div>
+                            )}
+                            <div>
+                                <DialogTitle className="text-xl">
+                                    {feedbackDialog.titulo}
+                                </DialogTitle>
+                            </div>
+                        </div>
+                    </DialogHeader>
+                    <DialogDescription className="text-base pt-2">
+                        {feedbackDialog.mensagem}
+                    </DialogDescription>
+                    <DialogFooter>
+                        <Button 
+                            onClick={() => setFeedbackDialog(prev => ({ ...prev, open: false }))}
+                            className={feedbackDialog.tipo === 'sucesso' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                        >
+                            Entendi
                         </Button>
                     </DialogFooter>
                 </DialogContent>

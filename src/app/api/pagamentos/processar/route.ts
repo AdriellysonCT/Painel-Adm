@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server"
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json()
-        const { id_entregador, valor, chave_pix, observacao } = body
+        const { id_entregador, valor, chave_pix, observacao, tipo_usuario } = body
         
         // Validações básicas
         if (!id_entregador || !valor || !chave_pix) {
@@ -21,16 +21,35 @@ export async function POST(request: NextRequest) {
             }, { status: 400 })
         }
         
+        // Validar tipo_usuario
+        const tipoUsuario = tipo_usuario || 'entregador'
+        if (!['entregador', 'restaurante'].includes(tipoUsuario)) {
+            return NextResponse.json({ 
+                error: 'Tipo de usuário inválido',
+                details: 'tipo_usuario deve ser "entregador" ou "restaurante"'
+            }, { status: 400 })
+        }
+        
         const supabase = createServerClient()
         
+        console.log('🔍 Processando pagamento:', {
+            id_usuario: id_entregador,
+            tipo_usuario: tipoUsuario,
+            valor,
+            chave_pix
+        })
+        
         // Chamar function do banco que faz todas as validações
-        const { data, error } = await supabase.rpc('processar_pagamento_entregador', {
-            p_id_entregador: id_entregador,
+        const { data, error } = await supabase.rpc('processar_pagamento_usuario', {
+            p_id_usuario: id_entregador,
+            p_tipo_usuario: tipoUsuario,
             p_valor: valor,
             p_chave_pix: chave_pix,
             p_admin_id: null, // TODO: pegar do auth
             p_observacao: observacao || null
         })
+        
+        console.log('📊 Resposta da função:', { data, error })
         
         if (error) {
             console.error('❌ Erro ao processar pagamento:', error)

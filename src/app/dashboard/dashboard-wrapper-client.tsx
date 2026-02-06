@@ -1,30 +1,49 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Download, LayoutDashboard, Receipt, Wallet, TrendingUp } from "lucide-react"
+import { Download, LayoutDashboard, Receipt, Wallet, TrendingUp, PieChart } from "lucide-react"
 import RepassesDashboardClient from './repasses-dashboard-client'
 import ResumoClient from './resumo-client'
 import HistoricoClient from './historico-client'
 import FechamentosClient from './fechamentos-client'
 import PagamentosPendentesClient from './pagamentos-pendentes-client'
 import ReceitaPlataformaClient from './receita-plataforma-client'
+import BreakdownFinanceiroClient from './breakdown-financeiro-client'
 
 type Modo = 'restaurante' | 'entregador'
+type Tab = 'dashboard' | 'breakdown' | 'pagamentos' | 'receita' | 'fechamentos'
 
 export default function DashboardWrapperClient() {
+    const router = useRouter()
+    const searchParams = useSearchParams()
+    
     const [modo, setModo] = useState<Modo>('restaurante')
     const [usuarioSelecionado, setUsuarioSelecionado] = useState<{ id: string; nome: string } | null>(null)
-    const [activeTab, setActiveTab] = useState('dashboard')
+    
+    // Ler aba da URL ou usar 'dashboard' como padrão
+    const activeTab = (searchParams.get('tab') as Tab) || 'dashboard'
+
+    const handleTabChange = (newTab: string) => {
+        // Atualizar URL sem recarregar a página
+        const params = new URLSearchParams(searchParams.toString())
+        params.set('tab', newTab)
+        router.push(`?${params.toString()}`, { scroll: false })
+    }
 
     return (
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full max-w-[800px] grid-cols-4 mb-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+            <TabsList className="grid w-full max-w-[1000px] grid-cols-5 mb-6">
                 <TabsTrigger value="dashboard" className="gap-2">
                     <LayoutDashboard className="h-4 w-4" />
                     Dashboard
+                </TabsTrigger>
+                <TabsTrigger value="breakdown" className="gap-2">
+                    <PieChart className="h-4 w-4" />
+                    Breakdown
                 </TabsTrigger>
                 <TabsTrigger value="pagamentos" className="gap-2">
                     <Wallet className="h-4 w-4" />
@@ -91,6 +110,10 @@ export default function DashboardWrapperClient() {
                         </CardContent>
                     </Card>
                 </div>
+            </TabsContent>
+
+            <TabsContent value="breakdown">
+                <BreakdownFinanceiroClient />
             </TabsContent>
 
             <TabsContent value="pagamentos">

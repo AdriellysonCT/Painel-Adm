@@ -1,16 +1,17 @@
-import { createServerClient } from "@/lib/supabaseClient"
+import { createServerClient, createAdminClient } from "@/lib/supabaseClient"
 import { NextResponse } from "next/server"
 
 export async function GET() {
     try {
-        const supabase = createServerClient()
+        const supabase = createAdminClient()
         
         // Buscar receita diária
+        // Aumentamos para 60 dias para garantir o cálculo correto de comparação com o mês anterior
         const { data: receitaDiariaRaw, error: errorDiaria } = await supabase
             .from('view_receita_plataforma')
             .select('*')
             .order('data', { ascending: false })
-            .limit(30) // Últimos 30 dias
+            .limit(60) 
         
         // Converter strings para números
         const receitaDiaria = (receitaDiariaRaw || []).map(r => ({
