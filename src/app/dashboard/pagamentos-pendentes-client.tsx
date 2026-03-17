@@ -93,8 +93,8 @@ export default function PagamentosPendentesClient() {
     }
 
     useEffect(() => {
-        carregarDados()
-    }, [])
+        carregarDados(filtro)
+    }, [filtro]) // Agora inclui filtro como dependência
 
     const handleFiltroChange = (novoFiltro: 'todos' | 'entregador' | 'restaurante') => {
         setFiltro(novoFiltro)

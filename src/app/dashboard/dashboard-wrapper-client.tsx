@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Download, LayoutDashboard, Receipt, Wallet, TrendingUp, PieChart } from "lucide-react"
+import { Download, LayoutDashboard, Receipt, Wallet, TrendingUp, PieChart, Ticket, Image as ImageIcon } from "lucide-react"
 import RepassesDashboardClient from './repasses-dashboard-client'
 import ResumoClient from './resumo-client'
 import HistoricoClient from './historico-client'
@@ -13,9 +13,11 @@ import FechamentosClient from './fechamentos-client'
 import PagamentosPendentesClient from './pagamentos-pendentes-client'
 import ReceitaPlataformaClient from './receita-plataforma-client'
 import BreakdownFinanceiroClient from './breakdown-financeiro-client'
+import CuponsClient from './cupons-client'
+import BannersManagerClient from './banners-manager-client'
 
 type Modo = 'restaurante' | 'entregador'
-type Tab = 'dashboard' | 'breakdown' | 'pagamentos' | 'receita' | 'fechamentos'
+type Tab = 'dashboard' | 'breakdown' | 'pagamentos' | 'receita' | 'fechamentos' | 'cupons' | 'banners'
 
 export default function DashboardWrapperClient() {
     const router = useRouter()
@@ -36,7 +38,7 @@ export default function DashboardWrapperClient() {
 
     return (
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full max-w-[1000px] grid-cols-5 mb-6">
+            <TabsList className="grid w-full max-w-[1200px] grid-cols-7 mb-6">
                 <TabsTrigger value="dashboard" className="gap-2">
                     <LayoutDashboard className="h-4 w-4" />
                     Dashboard
@@ -56,6 +58,14 @@ export default function DashboardWrapperClient() {
                 <TabsTrigger value="fechamentos" className="gap-2">
                     <Receipt className="h-4 w-4" />
                     Fechamentos
+                </TabsTrigger>
+                <TabsTrigger value="cupons" className="gap-2">
+                    <Ticket className="h-4 w-4" />
+                    Cupons
+                </TabsTrigger>
+                <TabsTrigger value="banners" className="gap-2">
+                    <ImageIcon className="h-4 w-4" />
+                    Banners
                 </TabsTrigger>
             </TabsList>
 
@@ -126,6 +136,14 @@ export default function DashboardWrapperClient() {
 
             <TabsContent value="fechamentos">
                 <FechamentosClient />
+            </TabsContent>
+
+            <TabsContent value="cupons">
+                <CuponsClient />
+            </TabsContent>
+
+            <TabsContent value="banners">
+                <BannersManagerClient />
             </TabsContent>
         </Tabs>
     )

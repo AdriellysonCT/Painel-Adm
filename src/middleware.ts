@@ -9,7 +9,7 @@ export function middleware(request: NextRequest) {
 
 	const isLoggedIn = Boolean(token)
 	const isAuthRoute = pathname.startsWith('/login')
-	const isProtected = pathname.startsWith('/dashboard') || pathname.startsWith('/api/private')
+	const isProtected = pathname.startsWith('/dashboard') || pathname.startsWith('/admin') || pathname.startsWith('/api/private')
 	const isRoot = pathname === '/'
 
 	// Redireciona a raiz baseado no estado de autenticação
@@ -35,7 +35,7 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-	matcher: ['/', '/dashboard/:path*', '/login', '/api/private/:path*'],
+	matcher: ['/', '/dashboard/:path*', '/admin/:path*', '/login', '/api/private/:path*'],
 }
 
 

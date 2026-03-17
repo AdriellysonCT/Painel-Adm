@@ -27,6 +27,12 @@ export default function ResumoClient({ modo }: { modo: Modo }) {
     const [restaurantes, setRestaurantes] = useState<ResumoRestaurante[]>([])
     const [entregadores, setEntregadores] = useState<ResumoEntregador[]>([])
     const [loading, setLoading] = useState(false)
+    const [refreshKey, setRefreshKey] = useState(0) // Key para forçar refresh
+
+    const handleUpdate = () => {
+        console.log('🔄 Atualizando dados após confirmação de pagamento...')
+        setRefreshKey(prev => prev + 1) // Incrementa para forçar re-fetch
+    }
 
     useEffect(() => {
         let mounted = true
@@ -175,15 +181,15 @@ export default function ResumoClient({ modo }: { modo: Modo }) {
         })()
         
         return () => { mounted = false }
-    }, [modo])
+    }, [modo, refreshKey]) // Adiciona refreshKey como dependência
 
     if (loading) {
         return <div className="text-center py-8 text-muted-foreground">Carregando...</div>
     }
 
     if (modo === 'restaurante') {
-        return <ResumoRestaurantesClient items={restaurantes} />
+        return <ResumoRestaurantesClient items={restaurantes} onUpdate={handleUpdate} />
     } else {
-        return <ResumoEntregadoresClient items={entregadores} />
+        return <ResumoEntregadoresClient items={entregadores} onUpdate={handleUpdate} />
     }
 }

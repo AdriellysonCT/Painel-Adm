@@ -17,7 +17,7 @@ type Item = {
     nome: string
 }
 
-export default function ResumoEntregadoresClient({ items }: { items: Item[] }) {
+export default function ResumoEntregadoresClient({ items, onUpdate }: { items: Item[]; onUpdate?: () => void }) {
     const [search, setSearch] = useState("")
     const [sort, setSort] = useState("pendente_desc")
     const [open, setOpen] = useState(false)
@@ -133,9 +133,11 @@ export default function ResumoEntregadoresClient({ items }: { items: Item[] }) {
                                     throw new Error(data?.message || 'Falha ao confirmar')
                                 }
                                 setOpen(false)
-                                location.reload()
+                                // Atualiza dados via callback ao invés de reload
+                                onUpdate?.()
                             } catch (e) {
                                 console.error(e)
+                                alert('Erro ao confirmar pagamento. Tente novamente.')
                             } finally {
                                 setLoading(false)
                             }

@@ -218,13 +218,15 @@ export default function RepassesDashboardClient({
                 const data = await res.json().catch(() => ({}))
                 throw new Error(data?.message || 'Falha ao confirmar repasse')
             }
-            // refresh
+            // Fecha dialog e limpa seleção
             setConfirmOpen(false)
             setSelected(null)
-            // Recarregar - força re-fetch dos dados
-            window.location.reload()
+            // Força re-fetch dos dados alterando o estado do modo
+            setModoInterno(modo === 'restaurante' ? 'entregador' : 'restaurante')
+            setTimeout(() => setModoInterno(modo), 10) // Volta ao modo original para forçar reload
         } catch (e) {
             console.error(e)
+            alert('Erro ao confirmar pagamento. Tente novamente.')
         } finally {
             setConfirmLoading(false)
         }

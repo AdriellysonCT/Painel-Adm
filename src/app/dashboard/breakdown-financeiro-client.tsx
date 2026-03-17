@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { formatCurrencyBRL } from "@/components/format"
@@ -32,10 +32,18 @@ export default function BreakdownFinanceiroClient() {
     const [vendas, setVendas] = useState<ItemVenda[]>([])
     const [resumo, setResumo] = useState<ResumoGeral | null>(null)
     const [loading, setLoading] = useState(true)
-    const [refreshing, setRefreshing] = useState(false) // Novo estado para refresh silencioso
+    const [refreshing, setRefreshing] = useState(false)
     const [periodo, setPeriodo] = useState<'hoje' | 'semana' | 'mes' | 'total'>('mes')
+    const isRefreshingRef = useRef(false) // Flag para evitar múltiplas chamadas simultâneas
 
-    const carregarDados = async (isAutoRefresh = false) => {
+    const carregarDados = useCallback(async (isAutoRefresh = false) => {
+        // Evita múltiplas chamadas simultâneas
+        if (isRefreshingRef.current) {
+            console.log('⏭️ Refresh já em andamento, pulando...')
+            return
+        }
+
+        isRefreshingRef.current = true
         if (!isAutoRefresh) setLoading(true)
         else setRefreshing(true)
         
@@ -53,13 +61,14 @@ export default function BreakdownFinanceiroClient() {
         } finally {
             setLoading(false)
             setRefreshing(false)
+            isRefreshingRef.current = false
         }
-    }
+    }, [periodo])
 
     // Carregamento inicial e quando muda o período
     useEffect(() => {
         carregarDados()
-    }, [periodo])
+    }, [carregarDados])
 
     // Setup do Auto-Refresh (a cada 30 segundos)
     useEffect(() => {
@@ -68,8 +77,11 @@ export default function BreakdownFinanceiroClient() {
             carregarDados(true)
         }, 30000) // 30 segundos
 
-        return () => clearInterval(interval)
-    }, [periodo]) // Reinicia o timer se o período mudar
+        return () => {
+            console.log('🧹 Limpando intervalo de auto-refresh')
+            clearInterval(interval)
+        }
+    }, [carregarDados]) // Agora depende de carregarDados que já tem periodo como dependência
 
     if (loading) {
         return (

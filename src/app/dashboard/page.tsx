@@ -2,7 +2,8 @@ import { createServerClient } from "@/lib/supabaseClient"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Suspense } from "react"
-import { Download } from "lucide-react"
+import { Download, LayoutDashboard } from "lucide-react"
+import Link from "next/link"
 
 type ResumoRestaurante = {
     id_restaurante: string
@@ -128,6 +129,14 @@ export default async function DashboardPage() {
                         <h2 className="text-base md:text-lg text-foreground/80">Painel administrativo</h2>
                         <p className="text-sm text-muted-foreground">Resumo de repasses, extratos e saldos.</p>
                     </div>
+                </div>
+                <div className="flex items-center gap-3">
+                    <Button variant="default" className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-bold shadow-lg shadow-emerald-500/20" asChild>
+                        <Link href="/admin/cockpit-financeiro">
+                            <LayoutDashboard className="size-4" />
+                            Cockpit Financeiro
+                        </Link>
+                    </Button>
                 </div>
             </div>
             <Suspense>
