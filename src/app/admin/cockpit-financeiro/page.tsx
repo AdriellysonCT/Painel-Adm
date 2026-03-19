@@ -57,7 +57,9 @@ async function fetchCockpitData() {
       alerta_passivo_descoberto: false,
       alerta_margem_baixa: false,
       alerta_liquidez_baixa: false,
-      alerta_caixa_negativo: false
+      alerta_caixa_negativo: false,
+      recomendacao_principal: 'Carregando análise...',
+      acao_sugerida: 'AGUARDAR'
     }
   }
 }
@@ -114,6 +116,8 @@ export default async function CockpitEstrategicoPage() {
     return new Date(dateStr).toLocaleDateString('pt-BR', { month: 'short' })
   }
 
+  const hasAnyAlert = alerts.alerta_passivo_descoberto || alerts.alerta_margem_baixa || alerts.alerta_liquidez_baixa || alerts.alerta_caixa_negativo;
+
   return (
     <div className="p-6 md:p-8 space-y-8 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-1000">
       
@@ -141,6 +145,7 @@ export default async function CockpitEstrategicoPage() {
            {alerts.alerta_passivo_descoberto && <Badge variant="destructive" className="animate-pulse gap-1"><AlertTriangle className="size-3" /> Passivo Descoberto</Badge>}
            {alerts.alerta_caixa_negativo && <Badge variant="destructive" className="animate-pulse gap-1"><AlertCircle className="size-3" /> Caixa Negativo</Badge>}
            {alerts.alerta_liquidez_baixa && <Badge variant="outline" className="text-orange-600 border-orange-500 gap-1"><Zap className="size-3" /> Baixa Liquidez</Badge>}
+           {alerts.alerta_margem_baixa && <Badge variant="outline" className="text-red-500 border-red-400 gap-1"><Activity className="size-3" /> Margem abaixo de 5%</Badge>}
         </div>
       </div>
 
@@ -183,7 +188,9 @@ export default async function CockpitEstrategicoPage() {
           </CardHeader>
           <CardContent>
              <div className="flex items-center gap-4">
-               <Badge className="bg-emerald-500 text-white font-black animate-pulse py-1 px-3">SOLVENTE</Badge>
+               <Badge className={`font-black py-1 px-3 ${cockpit.caixa_liquido_real >= 0 ? 'bg-emerald-500 text-white animate-pulse' : 'bg-red-500 text-white'}`}>
+                 {cockpit.caixa_liquido_real >= 0 ? 'SOLVENTE' : 'INSOLVENTE'}
+               </Badge>
                <div className="text-emerald-100/60 text-xs font-medium">Liquidez de segurança após quitar 100% dos parceiros.</div>
              </div>
           </CardContent>
@@ -332,40 +339,45 @@ export default async function CockpitEstrategicoPage() {
         ))}
       </div>
 
-      {/* Status de Risco Final */}
-      <div className={`p-6 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative border ${
-        Object.values(alerts).some(v => v === true) 
+      {/* Status de Risco Final (Dinâmico e Inteligente) */}
+      <div className={`p-6 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative border transition-all duration-500 ${
+        hasAnyAlert 
           ? 'bg-red-950 text-white border-red-500/50' 
           : 'bg-zinc-900 text-white border-white/10'
       }`}>
-         <div className={`absolute top-0 right-0 w-64 h-64 blur-[100px] z-0 ${
-            Object.values(alerts).some(v => v === true) ? 'bg-red-500/20' : 'bg-emerald-500/10'
+         <div className={`absolute top-0 right-0 w-64 h-64 blur-[100px] z-0 transition-all ${
+            hasAnyAlert ? 'bg-red-500/30' : 'bg-emerald-500/20'
          }`} />
-         <div className="z-10">
+         <div className="z-10 flex-1">
             <h4 className={`text-xs font-black uppercase tracking-[0.3em] mb-2 ${
-               Object.values(alerts).some(v => v === true) ? 'text-red-400' : 'text-emerald-400'
+               hasAnyAlert ? 'text-red-400' : 'text-emerald-400'
             }`}>Relatório de Saúde Financeira</h4>
             <div className="flex items-center gap-4">
-               <div className={`h-12 w-12 rounded-full flex items-center justify-center ${
-                  Object.values(alerts).some(v => v === true) ? 'bg-red-500' : 'bg-emerald-500'
+               <div className={`h-14 w-14 rounded-2xl flex items-center justify-center shadow-lg transition-transform hover:scale-110 ${
+                  hasAnyAlert ? 'bg-red-600' : 'bg-emerald-600'
                }`}>
-                  {Object.values(alerts).some(v => v === true) ? <AlertTriangle className="text-white size-8" /> : <ShieldCheck className="text-white size-8" />}
+                  {hasAnyAlert ? <AlertTriangle className="text-white size-8 animate-bounce" /> : <ShieldCheck className="text-white size-8" />}
                </div>
                <div>
-                  <p className="text-2xl font-black italic">
-                     {Object.values(alerts).some(v => v === true) ? 'ATENÇÃO: RISCO DETECTADO' : 'SOLVÊNCIA GARANTIDA'}
-                  </p>
-                  <p className="text-[10px] text-zinc-400 font-medium">
-                     {Object.values(alerts).some(v => v === true) 
-                        ? 'Foram identificados parâmetros fora dos limites de segurança. Recomenda-se auditoria imediata.' 
-                        : 'Todos os parâmetros de governança encontram-se dentro dos limites saudáveis.'}
+                  <div className="flex items-center gap-3">
+                    <p className="text-2xl font-black italic uppercase">
+                       {hasAnyAlert ? 'ATENÇÃO: RISCO DETECTADO' : 'SOLVÊNCIA GARANTIDA'}
+                    </p>
+                    {hasAnyAlert && <Badge className="bg-white text-red-600 font-bold">{alerts.acao_sugerida}</Badge>}
+                  </div>
+                  <p className="text-sm text-zinc-300 font-semibold mt-1 max-w-3xl leading-relaxed">
+                     {alerts.recomendacao_principal}
                   </p>
                </div>
             </div>
          </div>
-         <div className="text-right z-10 hidden md:block">
-            <p className="text-[10px] font-bold text-zinc-500 uppercase mb-1">Assinatura Digital</p>
-            <p className="text-xs font-mono text-emerald-500/50">audit_hash: {Math.random().toString(16).substring(2, 10).toUpperCase()}</p>
+         <div className="text-right z-10 hidden md:block border-l border-zinc-700/50 pl-6">
+            <p className="text-[10px] font-bold text-zinc-500 uppercase mb-1">Validação do Sistema</p>
+            <div className="flex items-center gap-2 justify-end mb-2">
+               <div className={`size-2 rounded-full ${hasAnyAlert ? 'bg-red-500' : 'bg-emerald-500'} animate-pulse`} />
+               <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-tighter">Motor Ledger v2.4</span>
+            </div>
+            <p className="text-xs font-mono text-emerald-500/50 uppercase">audit_hash: {Math.random().toString(16).substring(2, 8).toUpperCase()}</p>
          </div>
       </div>
 
