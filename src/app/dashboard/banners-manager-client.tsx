@@ -559,7 +559,6 @@ export default function BannersManagerClient() {
             media_scale: banner.media_scale ?? 1,
             media_offset_x: banner.media_offset_x ?? 0,
             media_offset_y: banner.media_offset_y ?? 0,
-                                 intensidade_animacao: (banner as any).intensidade_animacao ?? 1,
             intensidade_animacao: banner.intensidade_animacao ?? 1,
         })
 
