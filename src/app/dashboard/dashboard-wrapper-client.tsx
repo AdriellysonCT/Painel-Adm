@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Download, LayoutDashboard, Receipt, Wallet, TrendingUp, PieChart, Ticket, Image as ImageIcon, Users } from "lucide-react"
+import { Download, LayoutDashboard, Receipt, Wallet, TrendingUp, PieChart, Ticket, Image as ImageIcon, Users, Banknote } from "lucide-react"
 import CadastradosClient from './cadastrados-client'
 import RepassesDashboardClient from './repasses-dashboard-client'
 import ResumoClient from './resumo-client'
@@ -16,9 +16,10 @@ import ReceitaPlataformaClient from './receita-plataforma-client'
 import BreakdownFinanceiroClient from './breakdown-financeiro-client'
 import CuponsClient from './cupons-client'
 import BannersManagerClient from './banners-manager-client'
+import LedgerEntregadoresClient from './ledger-entregadores-client'
 
 type Modo = 'restaurante' | 'entregador'
-type Tab = 'dashboard' | 'breakdown' | 'pagamentos' | 'receita' | 'fechamentos' | 'cupons' | 'banners' | 'cadastrados'
+type Tab = 'dashboard' | 'breakdown' | 'pagamentos' | 'receita' | 'fechamentos' | 'cupons' | 'banners' | 'cadastrados' | 'ledger'
 
 export default function DashboardWrapperClient() {
     const router = useRouter()
@@ -39,7 +40,7 @@ export default function DashboardWrapperClient() {
 
     return (
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full max-w-[1200px] grid-cols-8 mb-6">
+            <TabsList className="grid w-full max-w-[1400px] grid-cols-9 mb-6">
                 <TabsTrigger value="dashboard" className="gap-2 text-xs sm:text-sm">
                     <LayoutDashboard className="h-4 w-4" />
                     Dashboard
@@ -67,6 +68,10 @@ export default function DashboardWrapperClient() {
                 <TabsTrigger value="cupons" className="gap-2 text-xs sm:text-sm">
                     <Ticket className="h-4 w-4" />
                     Cupons
+                </TabsTrigger>
+                <TabsTrigger value="ledger" className="gap-2 text-xs sm:text-sm">
+                    <Banknote className="h-4 w-4" />
+                    Ledger
                 </TabsTrigger>
                 <TabsTrigger value="banners" className="gap-2 text-xs sm:text-sm">
                     <ImageIcon className="h-4 w-4" />
@@ -149,6 +154,10 @@ export default function DashboardWrapperClient() {
 
             <TabsContent value="cupons">
                 <CuponsClient />
+            </TabsContent>
+
+            <TabsContent value="ledger">
+                <LedgerEntregadoresClient />
             </TabsContent>
 
             <TabsContent value="banners">

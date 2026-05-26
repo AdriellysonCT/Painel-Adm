@@ -122,8 +122,8 @@ export default function RepassesDashboardClient({
                 if (tipo === 'entrada' && (status === 'pendente' || status === 'confirmado')) {
                     saldos.set(r.id_usuario, prev + v)
                 } 
-                // Saída paga = dinheiro já repassado
-                else if (tipo === 'saida' && status === 'pago') {
+                // Saída paga ou repassado = dinheiro já repassado
+                else if (tipo === 'saida' && (status === 'pago' || status === 'repassado')) {
                     saldos.set(r.id_usuario, prev - v)
                 }
             }
@@ -161,7 +161,8 @@ export default function RepassesDashboardClient({
                            ((r.status || '').toLowerCase() === 'pendente' || (r.status || '').toLowerCase() === 'confirmado'))
                 .reduce((acc, r) => acc + Number(r.valor || 0), 0)
             const totalPg = allRows
-                .filter(r => (r.status || '').toLowerCase() === 'pago' && (r.tipo || '').toLowerCase() === 'saida')
+                .filter(r => (r.tipo || '').toLowerCase() === 'saida' && 
+                           ((r.status || '').toLowerCase() === 'pago' || (r.status || '').toLowerCase() === 'repassado'))
                 .reduce((acc, r) => acc + Number(r.valor || 0), 0)
             const totalPend = totalEntradas - totalPg
             

@@ -102,10 +102,10 @@ export default function ResumoClient({ modo }: { modo: Modo }) {
                         saldos.set(r.id_usuario, prev + v)
                         console.log(`  ✅ Somando entrada: ${prev} + ${v} = ${prev + v}`)
                     } 
-                    // Saída paga = dinheiro já repassado ao entregador
-                    else if (tipo === 'saida' && status === 'pago') {
+                    // Saída paga ou repassada = dinheiro já repassado ao entregador
+                    else if (tipo === 'saida' && (status === 'pago' || status === 'repassado')) {
                         saldos.set(r.id_usuario, prev - v)
-                        console.log(`  ➖ Subtraindo saída paga: ${prev} - ${v} = ${prev - v}`)
+                        console.log(`  ➖ Subtraindo saída paga/repassada: ${prev} - ${v} = ${prev - v}`)
                     }
                 }
 
@@ -153,8 +153,8 @@ export default function ResumoClient({ modo }: { modo: Modo }) {
                     if (tipo === 'entrada' && (status === 'pendente' || status === 'confirmado')) {
                         t.entradas += v
                     } 
-                    // Total recebido = saídas pagas
-                    else if (tipo === 'saida' && status === 'pago') {
+                    // Total recebido = saídas pagas ou repassadas
+                    else if (tipo === 'saida' && (status === 'pago' || status === 'repassado')) {
                         t.saidas += v
                     }
                 }

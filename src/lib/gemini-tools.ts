@@ -2,6 +2,19 @@ export const geminiTools = [
   {
     functionDeclarations: [
       {
+        name: "consultar_ledger_cash_digital",
+        description: "Retorna o resumo de entregas em dinheiro (cash) vs Pix/cartão por entregador. Mostra quanto cada entregador movimentou em dinheiro físico (coletado diretamente) vs digital, e o saldo líquido de taxas.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            entregador_id: {
+              type: "STRING",
+              description: "Opcional: UUID do entregador para ver extrato detalhado. Se não informado, lista todos."
+            }
+          }
+        }
+      },
+      {
         name: "listar_pagamentos_pendentes",
         description: "Lista entregadores e restaurantes com pagamentos pendentes, incluindo valores e chaves Pix.",
         parameters: {
@@ -106,6 +119,15 @@ const getSupabaseAdmin = () => createClient(
 );
 
 export const toolImplementations = {
+  consultar_ledger_cash_digital: async ({ entregador_id }: { entregador_id?: string }) => {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    const url = entregador_id
+      ? `${baseUrl}/api/entregadores/ledger-resumo?entregador_id=${entregador_id}`
+      : `${baseUrl}/api/entregadores/ledger-resumo`;
+    const res = await fetch(url);
+    const data = await res.json();
+    return data;
+  },
   listar_pagamentos_pendentes: async ({ tipo }: { tipo?: string }) => {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
     const url = tipo ? `${baseUrl}/api/entregadores/pendentes?tipo=${tipo}` : `${baseUrl}/api/entregadores/pendentes`;
