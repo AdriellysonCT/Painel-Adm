@@ -43,8 +43,16 @@ import {
 import BannerCropDialog from "./banner-crop-dialog"
 
 type MediaType = "emoji" | "image" | "banner_pronto"
-type TextAnimation = "slide-up" | "fade-scale" | "lift-reveal"
+type TextAnimation = "slide-up" | "slide-down" | "fade-scale" | "fade-in" | "scale-in" | "blur-in" | "flip-up" | "lift-reveal" | "stagger-reveal" | "bounce"
 type MediaAnimation = "float" | "pulse" | "wiggle" | "drift"
+type LayoutType = "text-left" | "text-right" | "centered" | "split" | "hero" | "card-bottom"
+type FontPreset = "impact" | "elegant" | "playful" | "modern" | "retro" | "luxury" | "festive"
+type BadgeText = "none" | "NOVO" | "PROMOÇÃO" | "LIMITADO" | "FRETE GRÁTIS" | "EXCLUSIVO" | "LANÇAMENTO" | "APROVEITE" | "BEST SELLER" | "DESCONTO"
+type BadgePosition = "top-left" | "top-right" | "bottom-left" | "bottom-right"
+type ButtonStyle = "pill" | "rounded" | "sharp"
+type CornerRadius = "soft" | "rounded" | "xl" | "full"
+type TextAnimationType = "entrance" | "continuous"
+type LogoPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center"
 
 type Banner = {
     id: string
@@ -68,6 +76,19 @@ type Banner = {
     media_offset_x?: number | null
     media_offset_y?: number | null
     intensidade_animacao?: number | null
+    layout_type?: string | null
+    font_preset?: string | null
+    badge_text?: string | null
+    badge_position?: string | null
+    button_style?: string | null
+    corner_radius?: string | null
+    overlay_opacity?: number | null
+    animacao_texto_tipo?: string | null
+    intensidade_animacao_texto?: number | null
+    logo_url?: string | null
+    logo_position?: string | null
+    media_focal_x?: number | null
+    media_focal_y?: number | null
 }
 
 type Entity = {
@@ -96,6 +117,19 @@ type BannerDraft = {
     media_offset_x: number
     media_offset_y: number
     intensidade_animacao: number
+    layout_type: LayoutType
+    font_preset: FontPreset
+    badge_text: BadgeText | string
+    badge_position: BadgePosition
+    button_style: ButtonStyle
+    corner_radius: CornerRadius
+    overlay_opacity: number
+    animacao_texto_tipo: TextAnimationType
+    intensidade_animacao_texto: number
+    logo_url: string
+    logo_position: LogoPosition
+    media_focal_x: number
+    media_focal_y: number
 }
 
 type BannerTheme = {
@@ -114,8 +148,15 @@ const EMOJI_OPTIONS = ["\uD83C\uDF55", "\uD83C\uDF54", "\uD83C\uDF5F", "\uD83C\u
 
 const TEXT_ANIMATIONS: { value: TextAnimation; label: string; description: string }[] = [
     { value: "slide-up", label: "Subida suave", description: "Texto entra de baixo com impacto suave." },
+    { value: "slide-down", label: "Descida elegante", description: "Texto desliza de cima com sofisticação." },
     { value: "fade-scale", label: "Fade com zoom", description: "Texto surge com leve zoom premium." },
+    { value: "fade-in", label: "Fade simples", description: "Transição suave de opacidade." },
+    { value: "scale-in", label: "Zoom suave", description: "Texto cresce do centro elegantemente." },
+    { value: "blur-in", label: "Desfoque para foco", description: "Texto sai do desfoque com estilo." },
+    { value: "flip-up", label: "Giro 3D", description: "Rotação tridimensional impactante." },
     { value: "lift-reveal", label: "Revelação em camadas", description: "Texto sobe com sensação de camadas." },
+    { value: "stagger-reveal", label: "Ondulação progressiva", description: "Palavras entram em sequência." },
+    { value: "bounce", label: "Bounce divertido", description: "Texto quicando com energia." },
 ]
 
 const MEDIA_ANIMATIONS: { value: MediaAnimation; label: string; description: string }[] = [
@@ -125,6 +166,71 @@ const MEDIA_ANIMATIONS: { value: MediaAnimation; label: string; description: str
     { value: "drift", label: "Deslizar", description: "Deslize lateral cinematográfico." },
 ]
 
+const TEXT_ANIMATION_TYPES: { value: TextAnimationType; label: string; description: string }[] = [
+    { value: "entrance", label: "Na entrada", description: "Animação acontece uma vez ao aparecer." },
+    { value: "continuous", label: "Durante o card", description: "Animação em loop infinito." },
+]
+
+const LAYOUT_OPTIONS: { value: LayoutType; label: string; icon: string; description: string }[] = [
+    { value: "text-left", label: "Texto à esquerda", icon: "◧", description: "Mídia à direita, texto à esquerda — clássico." },
+    { value: "text-right", label: "Texto à direita", icon: "◨", description: "Mídia à esquerda, texto à direita — invertido." },
+    { value: "centered", label: "Centralizado", icon: "⊞", description: "Tudo centralizado com mídia ao fundo e overlay escuro." },
+    { value: "split", label: "Dividido (50/50)", icon: "◫", description: "Mídia e texto lado a lado, cada um ocupando metade." },
+    { value: "hero", label: "Herói (fundo total)", icon: "▣", description: "Imagem ocupa o fundo inteiro com texto sobreposto e overlay." },
+    { value: "card-bottom", label: "Card inferior", icon: "▤", description: "Mídia ocupa topo, texto e CTA na parte inferior." },
+]
+
+const FONT_PRESETS: { value: FontPreset; label: string; description: string; headingClass: string; bodyClass: string }[] = [
+    { value: "impact", label: "Impacto", description: "Fontes grossas e chamativas.", headingClass: "text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight uppercase", bodyClass: "text-xs sm:text-sm font-bold uppercase tracking-wider" },
+    { value: "elegant", label: "Elegante", description: "Serifa fina e sofisticada.", headingClass: "text-2xl sm:text-3xl lg:text-4xl font-light italic tracking-wide", bodyClass: "text-xs sm:text-sm font-normal italic" },
+    { value: "playful", label: "Divertido", description: "Arredondado e amigável.", headingClass: "text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-normal", bodyClass: "text-xs sm:text-sm font-semibold" },
+    { value: "modern", label: "Moderno", description: "Limpo e geométrico.", headingClass: "text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight", bodyClass: "text-xs sm:text-sm font-medium" },
+    { value: "retro", label: "Retrô", description: "Estilo vintage com tracking aberto.", headingClass: "text-3xl sm:text-4xl lg:text-5xl font-black tracking-[0.15em] uppercase", bodyClass: "text-xs sm:text-sm font-bold uppercase tracking-[0.1em]" },
+    { value: "luxury", label: "Luxo", description: "Fino, leve e espaçado.", headingClass: "text-2xl sm:text-3xl lg:text-4xl font-thin tracking-[0.2em] uppercase", bodyClass: "text-xs sm:text-sm font-light tracking-widest uppercase" },
+    { value: "festive", label: "Festivo", description: "Black lowercase com personalidade.", headingClass: "text-3xl sm:text-4xl lg:text-5xl font-black lowercase tracking-tight", bodyClass: "text-xs sm:text-sm font-bold lowercase" },
+]
+
+const BADGE_OPTIONS: { value: BadgeText | string; label: string; color: string }[] = [
+    { value: "none", label: "Sem badge", color: "bg-transparent text-transparent" },
+    { value: "NOVO", label: "NOVO", color: "bg-emerald-500 text-white" },
+    { value: "PROMOÇÃO", label: "PROMOÇÃO", color: "bg-orange-500 text-white" },
+    { value: "LIMITADO", label: "LIMITADO", color: "bg-rose-600 text-white" },
+    { value: "FRETE GRÁTIS", label: "FRETE GRÁTIS", color: "bg-sky-500 text-white" },
+    { value: "EXCLUSIVO", label: "EXCLUSIVO", color: "bg-violet-600 text-white" },
+    { value: "LANÇAMENTO", label: "LANÇAMENTO", color: "bg-amber-500 text-white" },
+    { value: "APROVEITE", label: "APROVEITE", color: "bg-pink-500 text-white" },
+    { value: "BEST SELLER", label: "BEST SELLER", color: "bg-yellow-500 text-black" },
+    { value: "DESCONTO", label: "DESCONTO", color: "bg-red-600 text-white" },
+]
+
+const BADGE_POSITIONS: { value: BadgePosition; label: string }[] = [
+    { value: "top-left", label: "Sup. esquerdo" },
+    { value: "top-right", label: "Sup. direito" },
+    { value: "bottom-left", label: "Inf. esquerdo" },
+    { value: "bottom-right", label: "Inf. direito" },
+]
+
+const BUTTON_STYLES: { value: ButtonStyle; label: string; className: string }[] = [
+    { value: "pill", label: "Pílula", className: "rounded-full" },
+    { value: "rounded", label: "Arredondado", className: "rounded-xl" },
+    { value: "sharp", label: "Reto", className: "rounded-md" },
+]
+
+const CORNER_RADIUS_OPTIONS: { value: CornerRadius; label: string; className: string }[] = [
+    { value: "soft", label: "Suave", className: "rounded-xl" },
+    { value: "rounded", label: "Padrão", className: "rounded-[32px]" },
+    { value: "xl", label: "Arredondado", className: "rounded-[48px]" },
+    { value: "full", label: "Total", className: "rounded-[64px]" },
+]
+
+const LOGO_POSITIONS: { value: LogoPosition; label: string }[] = [
+    { value: "top-left", label: "Canto sup. esq." },
+    { value: "top-right", label: "Canto sup. dir." },
+    { value: "bottom-left", label: "Canto inf. esq." },
+    { value: "bottom-right", label: "Canto inf. dir." },
+    { value: "center", label: "Centro" },
+]
+
 const BANNER_THEMES: BannerTheme[] = [
     { value: "orange", label: "Laranja Ninja (Premium)", gradient: "linear-gradient(135deg, #fb923c 0%, #f97316 22%, #ef4444 68%, #7c2d12 100%)", pattern: "rgba(255, 255, 255, 0.18)", orb: "radial-gradient(circle, #fb923c, transparent)", button: "bg-white text-orange-600 hover:bg-orange-50", chip: "border-white/20 bg-white/10 text-white", eyebrow: "Destaque", indicator: "from-orange-200 via-white to-red-200" },
     { value: "red", label: "Brasa Intensa", gradient: "linear-gradient(140deg, #991b1b 0%, #dc2626 35%, #ef4444 64%, #7f1d1d 100%)", pattern: "rgba(255, 255, 255, 0.16)", orb: "radial-gradient(circle, #fca5a5, transparent)", button: "bg-white text-red-700 hover:bg-red-50", chip: "border-white/20 bg-white/10 text-white", eyebrow: "Urgente", indicator: "from-rose-200 via-white to-red-300" },
@@ -132,6 +238,11 @@ const BANNER_THEMES: BannerTheme[] = [
     { value: "blue", label: "Céu Noturno", gradient: "linear-gradient(140deg, #1d4ed8 0%, #2563eb 32%, #0ea5e9 66%, #082f49 100%)", pattern: "rgba(255, 255, 255, 0.18)", orb: "radial-gradient(circle, #7dd3fc, transparent)", button: "bg-white text-blue-700 hover:bg-sky-50", chip: "border-white/20 bg-white/10 text-white", eyebrow: "Novidade", indicator: "from-sky-200 via-white to-blue-200" },
     { value: "purple", label: "Místico Premium", gradient: "linear-gradient(140deg, #581c87 0%, #7e22ce 34%, #a855f7 68%, #1e1b4b 100%)", pattern: "rgba(255, 255, 255, 0.16)", orb: "radial-gradient(circle, #d8b4fe, transparent)", button: "bg-white text-purple-700 hover:bg-purple-50", chip: "border-white/20 bg-white/10 text-white", eyebrow: "Exclusivo", indicator: "from-fuchsia-200 via-white to-violet-200" },
     { value: "zinc", label: "Dark Stealth", gradient: "linear-gradient(140deg, #09090b 0%, #18181b 28%, #27272a 55%, #3f3f46 100%)", pattern: "rgba(255, 255, 255, 0.12)", orb: "radial-gradient(circle, #a1a1aa, transparent)", button: "bg-white text-zinc-900 hover:bg-zinc-100", chip: "border-white/15 bg-white/5 text-white/80", eyebrow: "Especial", indicator: "from-zinc-200 via-white to-amber-100" },
+    { value: "pink", label: "Pink Vibrante", gradient: "linear-gradient(135deg, #ec4899 0%, #db2777 30%, #be185d 65%, #831843 100%)", pattern: "rgba(255, 255, 255, 0.16)", orb: "radial-gradient(circle, #fbcfe8, transparent)", button: "bg-white text-pink-700 hover:bg-pink-50", chip: "border-white/20 bg-white/10 text-white", eyebrow: "Feminino", indicator: "from-pink-200 via-white to-rose-200" },
+    { value: "petroleo", label: "Azul Petróleo", gradient: "linear-gradient(135deg, #0f766e 0%, #0d9488 28%, #14b8a6 60%, #115e59 100%)", pattern: "rgba(255, 255, 255, 0.18)", orb: "radial-gradient(circle, #99f6e4, transparent)", button: "bg-white text-teal-700 hover:bg-teal-50", chip: "border-white/20 bg-white/10 text-white", eyebrow: "Exclusivo", indicator: "from-teal-200 via-white to-emerald-200" },
+    { value: "rosegold", label: "Rose Gold", gradient: "linear-gradient(135deg, #fda4af 0%, #fb7185 25%, #e11d48 55%, #881337 100%)", pattern: "rgba(255, 255, 255, 0.2)", orb: "radial-gradient(circle, #fecdd3, transparent)", button: "bg-white text-rose-700 hover:bg-rose-50", chip: "border-white/20 bg-white/10 text-white", eyebrow: "Premium", indicator: "from-rose-200 via-white to-pink-200" },
+    { value: "indigo", label: "Índigo Noturno", gradient: "linear-gradient(135deg, #3730a3 0%, #4338ca 30%, #6366f1 60%, #1e1b4b 100%)", pattern: "rgba(255, 255, 255, 0.15)", orb: "radial-gradient(circle, #c7d2fe, transparent)", button: "bg-white text-indigo-700 hover:bg-indigo-50", chip: "border-white/20 bg-white/10 text-white", eyebrow: "Profissional", indicator: "from-indigo-200 via-white to-blue-200" },
+    { value: "dourado", label: "Dourado Luxo", gradient: "linear-gradient(135deg, #d97706 0%, #f59e0b 28%, #fbbf24 58%, #b45309 100%)", pattern: "rgba(0, 0, 0, 0.12)", orb: "radial-gradient(circle, #fde68a, transparent)", button: "bg-black text-amber-300 hover:bg-amber-50 hover:text-amber-800", chip: "border-black/20 bg-black/10 text-black", eyebrow: "Luxo", indicator: "from-amber-200 via-white to-yellow-200" },
 ]
 
 const INITIAL_BANNER_STATE: BannerDraft = {
@@ -155,6 +266,19 @@ const INITIAL_BANNER_STATE: BannerDraft = {
     media_offset_x: 0,
     media_offset_y: 0,
     intensidade_animacao: 1,
+    layout_type: "text-left",
+    font_preset: "impact",
+    badge_text: "none",
+    badge_position: "top-right",
+    button_style: "pill",
+    corner_radius: "rounded",
+    overlay_opacity: 0.4,
+    animacao_texto_tipo: "entrance",
+    intensidade_animacao_texto: 1,
+    logo_url: "",
+    logo_position: "top-left",
+    media_focal_x: 50,
+    media_focal_y: 50,
 }
 
 function resolveTheme(themeValue: string) {
@@ -177,6 +301,19 @@ function normalizeBannerDraft(draft: BannerDraft) {
         media_offset_x: clampNumber(Number(draft.media_offset_x) || 0, -140, 140),
         media_offset_y: clampNumber(Number(draft.media_offset_y) || 0, -120, 140),
         intensidade_animacao: clampNumber(Number(draft.intensidade_animacao) || 1, 0.2, 4),
+        layout_type: (LAYOUT_OPTIONS.some(l => l.value === draft.layout_type) ? draft.layout_type : "text-left"),
+        font_preset: (FONT_PRESETS.some(f => f.value === draft.font_preset) ? draft.font_preset : "impact"),
+        badge_text: draft.badge_text || "none",
+        badge_position: (BADGE_POSITIONS.some(p => p.value === draft.badge_position) ? draft.badge_position : "top-right"),
+        button_style: (BUTTON_STYLES.some(s => s.value === draft.button_style) ? draft.button_style : "pill"),
+        corner_radius: (CORNER_RADIUS_OPTIONS.some(r => r.value === draft.corner_radius) ? draft.corner_radius : "rounded"),
+        overlay_opacity: clampNumber(Number(draft.overlay_opacity) ?? 0.4, 0.05, 0.85),
+        animacao_texto_tipo: (TEXT_ANIMATION_TYPES.some(t => t.value === draft.animacao_texto_tipo) ? draft.animacao_texto_tipo : "entrance"),
+        intensidade_animacao_texto: clampNumber(Number(draft.intensidade_animacao_texto) || 1, 0.2, 4),
+        logo_url: draft.logo_url || "",
+        logo_position: (LOGO_POSITIONS.some(p => p.value === draft.logo_position) ? draft.logo_position : "top-left"),
+        media_focal_x: clampNumber(Number(draft.media_focal_x) ?? 50, 0, 100),
+        media_focal_y: clampNumber(Number(draft.media_focal_y) ?? 50, 0, 100),
     }
 }
 
@@ -209,6 +346,48 @@ function getTextMotion(animation: TextAnimation, intensity: number = 1): any {
                 initial: { opacity: 0, y: 20 * intensity, scale: 1 - (0.03 * intensity) },
                 animate: { opacity: 1, y: 0, scale: 1 },
                 transition: { duration: 0.9 * durationMultiplier, ease: bezel },
+            }
+        case "slide-down":
+            return {
+                initial: { opacity: 0, y: -28 * intensity },
+                animate: { opacity: 1, y: 0 },
+                transition: { duration: 0.72 * durationMultiplier, ease: bezel },
+            }
+        case "fade-in":
+            return {
+                initial: { opacity: 0 },
+                animate: { opacity: 1 },
+                transition: { duration: 0.6 * durationMultiplier, ease: bezel },
+            }
+        case "scale-in":
+            return {
+                initial: { opacity: 0, scale: 1 - (0.12 * intensity) },
+                animate: { opacity: 1, scale: 1 },
+                transition: { duration: 0.7 * durationMultiplier, ease: bezel },
+            }
+        case "blur-in":
+            return {
+                initial: { opacity: 0, filter: "blur(8px)" },
+                animate: { opacity: 1, filter: "blur(0px)" },
+                transition: { duration: 0.85 * durationMultiplier, ease: bezel },
+            }
+        case "flip-up":
+            return {
+                initial: { opacity: 0, rotateX: 35 * intensity, y: 15 * intensity },
+                animate: { opacity: 1, rotateX: 0, y: 0 },
+                transition: { duration: 0.9 * durationMultiplier, ease: bezel },
+            }
+        case "stagger-reveal":
+            return {
+                initial: { opacity: 0, y: 24 * intensity },
+                animate: { opacity: 1, y: 0 },
+                transition: { duration: 0.8 * durationMultiplier, ease: bezel },
+            }
+        case "bounce":
+            return {
+                initial: { opacity: 0, y: 40 * intensity },
+                animate: { opacity: 1, y: 0 },
+                transition: { duration: 0.9 * durationMultiplier, type: "spring" as any, stiffness: 180 * intensity, damping: 12 },
             }
         default:
             return {
@@ -285,8 +464,9 @@ function BannerShowcase({
 }) {
     const theme = resolveTheme(banner.cor_fundo)
     const intensity = banner.intensidade_animacao ?? 1
+    const textIntensity = banner.intensidade_animacao_texto ?? 1
     const eyebrow = banner.eyebrow || theme.eyebrow
-    const textMotion = getTextMotion(banner.animacao_texto, intensity)
+    const textMotion = getTextMotion(banner.animacao_texto, textIntensity)
     const mediaMotion = getMediaMotion(banner.animacao_midia, intensity)
     const mediaKey = `${banner.tipo_midia}-${banner.imagem_url}-${banner.emoji}-${banner.animacao_midia}`
     const textKey = `${banner.titulo}-${banner.subtitulo}-${banner.animacao_texto}`
@@ -295,18 +475,284 @@ function BannerShowcase({
     const mediaOffsetX = banner.media_offset_x ?? 0
     const mediaOffsetY = banner.media_offset_y ?? 0
     const imageSize = compact ? 150 : 178
+    const isContinuous = banner.animacao_texto_tipo === "continuous"
+
+    const fontPreset = FONT_PRESETS.find(f => f.value === banner.font_preset) ?? FONT_PRESETS[0]
+    const btnStyle = BUTTON_STYLES.find(s => s.value === banner.button_style) ?? BUTTON_STYLES[0]
+    const crnr = CORNER_RADIUS_OPTIONS.find(r => r.value === banner.corner_radius) ?? CORNER_RADIUS_OPTIONS[1]
+    const badgeConfig = BADGE_OPTIONS.find(b => b.value === banner.badge_text)
+
+    const badgePosClasses: Record<string, string> = {
+        "top-left": "top-3 left-3",
+        "top-right": "top-3 right-3",
+        "bottom-left": "bottom-3 left-3",
+        "bottom-right": "bottom-3 right-3",
+    }
+
+    const logoPosClasses: Record<string, string> = {
+        "top-left": "top-3 left-3",
+        "top-right": "top-3 right-3",
+        "bottom-left": "bottom-3 left-3",
+        "bottom-right": "bottom-3 right-3",
+        "center": "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
+    }
+
+    const renderMedia = () => {
+        if (isImageMedia) {
+            return (
+                <motion.div
+                    className={`relative ${editable ? "cursor-grab active:cursor-grabbing pointer-events-auto" : ""}`}
+                    drag={editable}
+                    dragMomentum={false}
+                    dragElastic={0.08}
+                    dragConstraints={{ left: -120, right: 120, top: -120, bottom: 140 }}
+                    onDragEnd={(_, info) => {
+                        if (!onMediaPositionChange) return
+                        onMediaPositionChange(
+                            clampNumber(mediaOffsetX + info.offset.x, -140, 140),
+                            clampNumber(mediaOffsetY + info.offset.y, -120, 140),
+                        )
+                    }}
+                    style={{
+                        width: imageSize,
+                        height: imageSize,
+                        x: mediaOffsetX,
+                        y: mediaOffsetY,
+                        scale: mediaScale,
+                    }}
+                >
+                    <div className="absolute inset-[14%] rounded-full blur-3xl opacity-60" style={{ background: theme.orb }} />
+                    <motion.div key={mediaKey} className="relative h-full w-full" {...mediaMotion}>
+                        <Image
+                            src={banner.imagem_url}
+                            alt={banner.titulo || "Banner"}
+                            fill
+                            sizes={compact ? "150px" : "178px"}
+                            className="object-contain drop-shadow-[0_18px_34px_rgba(0,0,0,0.28)]"
+                            unoptimized
+                        />
+                    </motion.div>
+                    {editable && (
+                        <div className="pointer-events-none absolute -bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-black/25 px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-white/80 backdrop-blur-sm whitespace-nowrap">
+                            Arraste a arte
+                        </div>
+                    )}
+                </motion.div>
+            )
+        }
+        return (
+            <motion.div
+                key={mediaKey}
+                className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/10 backdrop-blur-sm ${compact ? "h-24 w-24" : "h-28 w-28"}`}
+                {...mediaMotion}
+            >
+                <motion.div
+                    className="absolute inset-3 rounded-full bg-white/18 blur-xl"
+                    animate={{ opacity: [0.35, 0.7, 0.35], scale: [0.92, 1.08, 0.92] }}
+                    transition={{ duration: 3.2, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" } as any}
+                />
+                <span className={`relative z-10 ${compact ? "text-4xl" : "text-5xl"}`}>{banner.emoji || "\uD83D\uDD25"}</span>
+            </motion.div>
+        )
+    }
+
+    const logoEl = banner.logo_url ? (
+        <img src={banner.logo_url} alt="logo" className={`absolute ${logoPosClasses[banner.logo_position] || "top-3 left-3"} w-12 h-12 sm:w-16 sm:h-16 object-contain drop-shadow-lg z-10`} />
+    ) : null
+
+    const textContent = (
+        <motion.div key={textKey} className="space-y-3" {...textMotion}>
+            <div className="flex flex-wrap items-center gap-2">
+                <Badge className={`rounded-full border backdrop-blur-md px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] ${theme.chip}`}>{eyebrow}</Badge>
+                {!banner.ativo && <Badge className="rounded-full border border-white/20 bg-black/20 text-white px-2 py-0.5 text-[10px]">Pausado</Badge>}
+            </div>
+            <div className="space-y-2">
+                <h3
+                    className={`${fontPreset.headingClass} leading-[0.95] ${compact ? "text-[1.75rem]" : ""}`}
+                    data-text-anim={isContinuous ? "continuous" : undefined}
+                >
+                    {banner.titulo || "Pizza em dobro!"}
+                </h3>
+                <p className={`max-w-sm text-white/86 ${fontPreset.bodyClass} ${compact ? "text-xs" : ""}`}>
+                    {banner.subtitulo || "Texto curto, objetivo e com ritmo de campanha."}
+                </p>
+            </div>
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="inline-flex">
+                <button type="button" className={`inline-flex items-center gap-2 px-5 py-3 text-xs font-bold shadow-xl transition-colors ${theme.button} ${btnStyle.className}`}>
+                    {banner.botao_texto || "Pedir agora"}
+                    <ArrowRight className="h-3.5 w-3.5" />
+                </button>
+            </motion.div>
+        </motion.div>
+    )
 
     if (banner.tipo_midia === "banner_pronto" && banner.imagem_url) {
         return (
-            <div className={`relative overflow-hidden rounded-[32px] shadow-2xl ${compact ? "min-h-[248px]" : "min-h-[280px]"}`}>
+            <div className={`relative overflow-hidden ${crnr.className} shadow-2xl ${compact ? "min-h-[248px]" : "min-h-[280px]"}`}>
                 <Image src={banner.imagem_url} alt="Banner promocional" fill className="object-cover" sizes={compact ? "400px" : "600px"} unoptimized />
             </div>
         )
     }
 
+    if (banner.layout_type === "hero" && isImageMedia) {
+        return (
+            <div className={`relative overflow-hidden ${crnr.className} h-48 sm:h-56 lg:h-64 text-white shadow-2xl`}>
+                <img
+                    src={banner.imagem_url}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover"
+                    style={{ objectPosition: `${banner.media_focal_x ?? 50}% ${banner.media_focal_y ?? 50}%` }}
+                />
+                <div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${banner.overlay_opacity ?? 0.4})` }} />
+                {banner.badge_text !== "none" && badgeConfig && (
+                    <span className={`absolute ${badgePosClasses[banner.badge_position] || "top-3 right-3"} z-20 px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider ${badgeConfig.color}`}>
+                        {banner.badge_text}
+                    </span>
+                )}
+                {logoEl}
+                <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-6 text-white">
+                    <div className="flex flex-wrap items-center justify-center gap-2 mb-2">
+                        <Badge className="rounded-full border backdrop-blur-md px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] bg-white/20 text-white border-white/30">{eyebrow}</Badge>
+                        {!banner.ativo && <Badge className="rounded-full border border-white/20 bg-black/20 text-white px-2 py-0.5 text-[10px]">Pausado</Badge>}
+                    </div>
+                    <h3 className={`${fontPreset.headingClass} text-white`} data-text-anim={isContinuous ? "continuous" : undefined}>
+                        {banner.titulo || "Pizza em dobro!"}
+                    </h3>
+                    {banner.subtitulo && <p className={`max-w-md text-white/86 ${fontPreset.bodyClass}`}>{banner.subtitulo}</p>}
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="mt-3 inline-flex">
+                        <button type="button" className={`inline-flex items-center gap-2 px-6 py-2 text-sm font-bold shadow-lg text-white ${btnStyle.className} bg-white/20 backdrop-blur-md border border-white/30 hover:bg-white/30 transition-colors`}>
+                            {banner.botao_texto || "Pedir agora"}
+                            <ArrowRight className="h-3.5 w-3.5" />
+                        </button>
+                    </motion.div>
+                </div>
+            </div>
+        )
+    }
+
+    if (banner.layout_type === "centered") {
+        return (
+            <div
+                className={`relative overflow-hidden ${crnr.className} text-white shadow-2xl ${compact ? "min-h-[248px]" : "min-h-[280px]"}`}
+                style={{ background: theme.gradient }}
+            >
+                <div className="absolute inset-0 opacity-70" style={{ backgroundImage: `radial-gradient(circle at 1px 1px, ${theme.pattern} 1px, transparent 0)`, backgroundSize: compact ? "28px 28px" : "32px 32px" }} />
+                <div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${banner.overlay_opacity ?? 0.4})` }} />
+                <motion.div className="absolute -right-10 -top-10 h-44 w-44 rounded-full blur-3xl" style={{ background: theme.orb }} animate={{ scale: [1, 1.08, 1], opacity: [0.65, 0.95, 0.65] }} transition={{ duration: 5.2, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }} />
+                {banner.badge_text !== "none" && badgeConfig && (
+                    <span className={`absolute ${badgePosClasses[banner.badge_position] || "top-3 right-3"} z-20 px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider ${badgeConfig.color}`}>
+                        {banner.badge_text}
+                    </span>
+                )}
+                {logoEl}
+                <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-6">
+                    <div className="flex flex-wrap items-center justify-center gap-2 mb-2">
+                        <Badge className={`rounded-full border backdrop-blur-md px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] ${theme.chip}`}>{eyebrow}</Badge>
+                        {!banner.ativo && <Badge className="rounded-full border border-white/20 bg-black/20 text-white px-2 py-0.5 text-[10px]">Pausado</Badge>}
+                    </div>
+                    <h3 className={`${fontPreset.headingClass}`} data-text-anim={isContinuous ? "continuous" : undefined}>
+                        {banner.titulo || "Pizza em dobro!"}
+                    </h3>
+                    {banner.subtitulo && <p className={`max-w-md text-white/86 ${fontPreset.bodyClass}`}>{banner.subtitulo}</p>}
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="mt-3 inline-flex">
+                        <button type="button" className={`inline-flex items-center gap-2 px-6 py-2 text-sm font-bold shadow-lg ${theme.button} ${btnStyle.className}`}>
+                            {banner.botao_texto || "Pedir agora"}
+                            <ArrowRight className="h-3.5 w-3.5" />
+                        </button>
+                    </motion.div>
+                </div>
+                <div className="absolute bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 py-2 backdrop-blur-xl sm:bottom-5">
+                    {[0, 1, 2].map((i) => (
+                        <div key={i} className="relative overflow-hidden rounded-full border transition-all duration-500" style={{ height: "5px", minHeight: "5px", maxHeight: "5px", width: i === 0 ? "32px" : "5px", minWidth: i === 0 ? "32px" : "5px", maxWidth: i === 0 ? "32px" : "5px", borderColor: i === 0 ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.15)", backgroundColor: i === 0 ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.25)" }}>
+                            {i === 0 && <div className={`absolute inset-0 rounded-full bg-linear-to-r opacity-80 ${theme.indicator}`} />}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )
+    }
+
+    if (banner.layout_type === "card-bottom" && isImageMedia) {
+        return (
+            <div className={`relative overflow-hidden ${crnr.className} text-white shadow-2xl ${compact ? "min-h-[248px]" : "min-h-[280px]"}`} style={{ background: theme.gradient }}>
+                <div className="absolute inset-0 opacity-70" style={{ backgroundImage: `radial-gradient(circle at 1px 1px, ${theme.pattern} 1px, transparent 0)`, backgroundSize: compact ? "28px 28px" : "32px 32px" }} />
+                <motion.div className="absolute -right-10 -top-10 h-44 w-44 rounded-full blur-3xl" style={{ background: theme.orb }} animate={{ scale: [1, 1.08, 1], opacity: [0.65, 0.95, 0.65] }} transition={{ duration: 5.2, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }} />
+                {banner.badge_text !== "none" && badgeConfig && (
+                    <span className={`absolute ${badgePosClasses[banner.badge_position] || "top-3 right-3"} z-20 px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider ${badgeConfig.color}`}>
+                        {banner.badge_text}
+                    </span>
+                )}
+                {logoEl}
+                <div className="relative z-10 flex flex-col h-full">
+                    <div className="flex-1 flex items-center justify-center p-4">
+                        <div className="relative w-28 h-28 sm:w-36 sm:h-36">
+                            <motion.div className="absolute inset-[14%] rounded-full blur-3xl opacity-60" style={{ background: theme.orb }} />
+                            <motion.div key={mediaKey} className="relative h-full w-full" {...mediaMotion}>
+                                <Image src={banner.imagem_url} alt={banner.titulo || "Banner"} fill sizes={compact ? "112px" : "144px"} className="object-contain drop-shadow-[0_18px_34px_rgba(0,0,0,0.28)]" unoptimized />
+                            </motion.div>
+                        </div>
+                    </div>
+                    <div className="p-4 pt-0">
+                        <motion.div key={textKey} {...textMotion} className="space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Badge className={`rounded-full border backdrop-blur-md px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] ${theme.chip}`}>{eyebrow}</Badge>
+                            </div>
+                            <h3 className={`${fontPreset.headingClass} text-sm sm:text-base`} data-text-anim={isContinuous ? "continuous" : undefined}>
+                                {banner.titulo || "Pizza em dobro!"}
+                            </h3>
+                            <p className={`text-white/86 text-xs ${fontPreset.bodyClass}`}>{banner.subtitulo || "Texto curto, objetivo e com ritmo de campanha."}</p>
+                            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="inline-flex mt-1">
+                                <button type="button" className={`inline-flex items-center gap-2 px-4 py-2 text-xs font-bold shadow-xl transition-colors ${theme.button} ${btnStyle.className}`}>
+                                    {banner.botao_texto || "Pedir agora"}
+                                    <ArrowRight className="h-3 w-3" />
+                                </button>
+                            </motion.div>
+                        </motion.div>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    if (banner.layout_type === "split" && isImageMedia) {
+        return (
+            <div className={`relative overflow-hidden ${crnr.className} text-white shadow-2xl ${compact ? "min-h-[248px]" : "min-h-[280px]"} flex`} style={{ background: theme.gradient }}>
+                <div className="absolute inset-0 opacity-70" style={{ backgroundImage: `radial-gradient(circle at 1px 1px, ${theme.pattern} 1px, transparent 0)`, backgroundSize: compact ? "28px 28px" : "32px 32px" }} />
+                <motion.div className="absolute -right-10 -top-10 h-44 w-44 rounded-full blur-3xl" style={{ background: theme.orb }} animate={{ scale: [1, 1.08, 1], opacity: [0.65, 0.95, 0.65] }} transition={{ duration: 5.2, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }} />
+                {banner.badge_text !== "none" && badgeConfig && (
+                    <span className={`absolute ${badgePosClasses[banner.badge_position] || "top-3 right-3"} z-20 px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider ${badgeConfig.color}`}>
+                        {banner.badge_text}
+                    </span>
+                )}
+                {logoEl}
+                <div className="relative z-10 flex w-1/2 items-center overflow-hidden bg-black/20">
+                    <motion.div key={mediaKey} className="relative w-full h-full min-h-[160px]" {...mediaMotion}>
+                        <Image src={banner.imagem_url} alt={banner.titulo || "Banner"} fill className="object-cover" sizes="50vw" unoptimized />
+                    </motion.div>
+                </div>
+                <div className="relative z-10 flex w-1/2 items-center p-4">
+                    <motion.div key={textKey} {...textMotion} className="space-y-2">
+                        <Badge className={`rounded-full border backdrop-blur-md px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] ${theme.chip}`}>{eyebrow}</Badge>
+                        <h3 className={`${fontPreset.headingClass} text-sm sm:text-base`} data-text-anim={isContinuous ? "continuous" : undefined}>
+                            {banner.titulo || "Pizza em dobro!"}
+                        </h3>
+                        <p className={`text-white/86 text-xs ${fontPreset.bodyClass}`}>{banner.subtitulo || "Texto curto, objetivo e com ritmo de campanha."}</p>
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="inline-flex mt-1">
+                            <button type="button" className={`inline-flex items-center gap-2 px-4 py-2 text-xs font-bold shadow-xl transition-colors ${theme.button} ${btnStyle.className}`}>
+                                {banner.botao_texto || "Pedir agora"}
+                                <ArrowRight className="h-3 w-3" />
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                </div>
+            </div>
+        )
+    }
+
+    const isTextRight = banner.layout_type === "text-right"
     return (
         <div
-            className={`relative overflow-hidden rounded-[32px] border border-white/15 text-white shadow-2xl ${compact ? "min-h-[248px]" : "min-h-[280px]"}`}
+            className={`relative overflow-hidden ${crnr.className} border border-white/15 text-white shadow-2xl ${compact ? "min-h-[248px]" : "min-h-[280px]"}`}
             style={{ backgroundImage: theme.gradient }}
         >
             <div
@@ -349,87 +795,23 @@ function BannerShowcase({
                 ))}
             </div>
 
-            <div className={`relative z-10 grid min-h-[260px] items-center gap-6 p-5 pt-8 pb-24 sm:min-h-[320px] sm:grid-cols-[minmax(0,1fr)_170px] sm:gap-5 sm:p-7 sm:pt-20 sm:pb-20 md:grid-cols-[minmax(0,1.08fr)_210px] md:gap-7 lg:min-h-[360px] lg:grid-cols-[minmax(0,1.15fr)_260px] lg:gap-10 lg:p-9 lg:pt-20 lg:pb-20`}>
-                <motion.div key={textKey} className={`space-y-4`} {...textMotion}>
-                    <div className="flex flex-wrap items-center gap-2">
-                        <Badge className={`rounded-full border backdrop-blur-md px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] ${theme.chip}`}>{eyebrow}</Badge>
-                        {!banner.ativo && <Badge className="rounded-full border border-white/20 bg-black/20 text-white px-2 py-0.5 text-[10px]">Pausado</Badge>}
-                    </div>
-                    <div className="space-y-2">
-                        <h3 className={`font-black leading-[0.95] tracking-tight ${compact ? "text-[1.75rem]" : "text-[2.15rem]"}`}>
-                            {banner.titulo || "Pizza em dobro!"}
-                        </h3>
-                        <p className={`max-w-sm text-white/86 ${compact ? "text-xs" : "text-sm"}`}>
-                            {banner.subtitulo || "Texto curto, objetivo e com ritmo de campanha."}
-                        </p>
-                    </div>
-
-                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="inline-flex">
-                        <button type="button" className={`inline-flex items-center gap-2 rounded-full px-5 py-3 text-xs font-bold shadow-xl transition-colors ${theme.button}`}>
-                            {banner.botao_texto || "Pedir agora"}
-                            <ArrowRight className="h-3.5 w-3.5" />
-                        </button>
-                    </motion.div>
-                </motion.div>
-
-                <div className="pointer-events-none absolute bottom-6 right-2 flex items-end justify-end scale-[0.85] origin-bottom-right sm:static sm:flex-none sm:scale-100 sm:items-center sm:justify-center lg:justify-end">
+            <div className={`relative z-10 flex ${isTextRight ? "flex-row-reverse" : ""} items-center w-full h-full min-h-[260px] sm:min-h-[320px] lg:min-h-[360px] px-5 py-4 gap-4 sm:px-7 sm:py-6 lg:px-9 lg:py-8`}>
+                <div className="flex-1 min-w-0">
+                    {banner.badge_text !== "none" && banner.layout_type !== "hero" && badgeConfig && (
+                        <span className={`inline-block px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider mb-2 ${badgeConfig.color}`}>
+                            {banner.badge_text}
+                        </span>
+                    )}
+                    {textContent}
+                </div>
+                <div className="flex-shrink-0 pointer-events-none absolute bottom-6 right-2 flex items-end justify-end scale-[0.85] origin-bottom-right sm:static sm:flex-none sm:scale-100 sm:items-center sm:justify-center lg:justify-end">
                     <div className="relative">
-                        {isImageMedia ? (
-                            <motion.div
-                                className={`relative ${editable ? "cursor-grab active:cursor-grabbing pointer-events-auto" : ""}`}
-                                drag={editable}
-                                dragMomentum={false}
-                                dragElastic={0.08}
-                                dragConstraints={{ left: -120, right: 120, top: -120, bottom: 140 }}
-                                onDragEnd={(_, info) => {
-                                    if (!onMediaPositionChange) return
-                                    onMediaPositionChange(
-                                        clampNumber(mediaOffsetX + info.offset.x, -140, 140),
-                                        clampNumber(mediaOffsetY + info.offset.y, -120, 140),
-                                    )
-                                }}
-                                style={{
-                                    width: imageSize,
-                                    height: imageSize,
-                                    x: mediaOffsetX,
-                                    y: mediaOffsetY,
-                                    scale: mediaScale,
-                                }}
-                            >
-                                <div className="absolute inset-[14%] rounded-full blur-3xl opacity-60" style={{ background: theme.orb }} />
-                                <motion.div key={mediaKey} className="relative h-full w-full" {...mediaMotion}>
-                                    <Image
-                                        src={banner.imagem_url}
-                                        alt={banner.titulo || "Banner"}
-                                        fill
-                                        sizes={compact ? "150px" : "178px"}
-                                        className="object-contain drop-shadow-[0_18px_34px_rgba(0,0,0,0.28)]"
-                                        unoptimized
-                                    />
-                                </motion.div>
-                                {editable && (
-                                    <div className="pointer-events-none absolute -bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-black/25 px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-white/80 backdrop-blur-sm whitespace-nowrap">
-                                        Arraste a arte
-                                    </div>
-                                )}
-                            </motion.div>
-                        ) : (
-                            <motion.div
-                                key={mediaKey}
-                                className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/10 backdrop-blur-sm ${compact ? "h-24 w-24" : "h-28 w-28"}`}
-                                {...mediaMotion}
-                            >
-                                <motion.div
-                                    className="absolute inset-3 rounded-full bg-white/18 blur-xl"
-                                    animate={{ opacity: [0.35, 0.7, 0.35], scale: [0.92, 1.08, 0.92] }}
-                                    transition={{ duration: 3.2, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" } as any}
-                                />
-                                <span className={`relative z-10 ${compact ? "text-4xl" : "text-5xl"}`}>{banner.emoji || "\uD83D\uDD25"}</span>
-                            </motion.div>
-                        )}
+                        {renderMedia()}
                     </div>
                 </div>
             </div>
+
+            {logoEl}
         </div>
     )
 }
@@ -556,6 +938,19 @@ export default function BannersManagerClient() {
             media_offset_x: banner.media_offset_x ?? 0,
             media_offset_y: banner.media_offset_y ?? 0,
             intensidade_animacao: banner.intensidade_animacao ?? 1,
+            layout_type: (banner as any).layout_type || "text-left",
+            font_preset: (banner as any).font_preset || "impact",
+            badge_text: (banner as any).badge_text || "none",
+            badge_position: (banner as any).badge_position || "top-right",
+            button_style: (banner as any).button_style || "pill",
+            corner_radius: (banner as any).corner_radius || "rounded",
+            overlay_opacity: (banner as any).overlay_opacity ?? 0.4,
+            animacao_texto_tipo: (banner as any).animacao_texto_tipo || "entrance",
+            intensidade_animacao_texto: (banner as any).intensidade_animacao_texto ?? 1,
+            logo_url: (banner as any).logo_url || "",
+            logo_position: (banner as any).logo_position || "top-left",
+            media_focal_x: (banner as any).media_focal_x ?? 50,
+            media_focal_y: (banner as any).media_focal_y ?? 50,
         })
 
         if (banner.tipo_link === "restaurant") {
@@ -606,6 +1001,19 @@ export default function BannersManagerClient() {
                 media_offset_x: payload.tipo_midia === "image" ? payload.media_offset_x : 0,
                 media_offset_y: payload.tipo_midia === "image" ? payload.media_offset_y : 0,
                 intensidade_animacao: payload.intensidade_animacao,
+                layout_type: payload.layout_type,
+                font_preset: payload.font_preset,
+                badge_text: payload.badge_text === "none" ? null : payload.badge_text,
+                badge_position: payload.badge_text === "none" ? null : payload.badge_position,
+                button_style: payload.button_style,
+                corner_radius: payload.corner_radius,
+                overlay_opacity: payload.overlay_opacity,
+                animacao_texto_tipo: payload.animacao_texto_tipo,
+                intensidade_animacao_texto: payload.intensidade_animacao_texto,
+                logo_url: payload.logo_url || null,
+                logo_position: payload.logo_position,
+                media_focal_x: payload.layout_type === "hero" ? payload.media_focal_x : 50,
+                media_focal_y: payload.layout_type === "hero" ? payload.media_focal_y : 50,
             }
 
             const runSave = async (savePayload: typeof fullPayload | typeof mediaPayload | typeof basePayload) => {
@@ -1008,7 +1416,161 @@ export default function BannersManagerClient() {
                                                     <span className="text-[10px] font-bold text-blue-700">EXTREME</span>
                                                 </div>
                                             </div>
+
+                                            <div className="space-y-4 rounded-[24px] border border-violet-200 bg-violet-50/40 p-5">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div className="space-y-1">
+                                                        <Label className="flex items-center gap-2 text-sm font-bold text-violet-700">
+                                                            <Sparkles className="h-4 w-4" /> Tipo de animação do texto
+                                                        </Label>
+                                                        <p className="text-xs text-violet-700/70">Apenas na entrada ou em loop contínuo.</p>
+                                                    </div>
+                                                    <Select value={novoBanner.animacao_texto_tipo} onValueChange={(value) => setNovoBanner((prev) => ({ ...prev, animacao_texto_tipo: value as TextAnimationType }))}>
+                                                        <SelectTrigger className="w-44"><SelectValue placeholder="Tipo" /></SelectTrigger>
+                                                        <SelectContent>{TEXT_ANIMATION_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <p className="text-xs text-violet-700/70">{TEXT_ANIMATION_TYPES.find((t) => t.value === novoBanner.animacao_texto_tipo)?.description}</p>
+                                            </div>
+
+                                            <div className="space-y-4 rounded-[24px] border border-violet-200 bg-violet-50/40 p-5">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div className="space-y-1">
+                                                        <Label className="flex items-center gap-2 text-sm font-bold text-violet-700">
+                                                            <Sparkles className="h-4 w-4" /> Intensidade da animação do texto
+                                                        </Label>
+                                                        <p className="text-xs text-violet-700/70">Velocidade e amplitude do movimento do texto.</p>
+                                                    </div>
+                                                    <Badge variant="outline" className="border-violet-200 bg-white text-violet-700">
+                                                        {novoBanner.intensidade_animacao_texto.toFixed(1)}x
+                                                    </Badge>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <span className="text-[10px] font-bold text-violet-400">SOFT</span>
+                                                    <input
+                                                        type="range"
+                                                        min="0.2"
+                                                        max="4"
+                                                        step="0.1"
+                                                        value={novoBanner.intensidade_animacao_texto}
+                                                        onChange={(event) => setNovoBanner((prev) => ({ ...prev, intensidade_animacao_texto: Number(event.target.value) }))}
+                                                        className="h-2 w-full appearance-none rounded-lg bg-violet-200 accent-[#7c3aed]"
+                                                    />
+                                                    <span className="text-[10px] font-bold text-violet-700">EXTREME</span>
+                                                </div>
+                                            </div>
                                         </>
+                                    )}
+
+                                    <div className="space-y-4 rounded-[24px] border border-border/70 bg-muted/20 p-4">
+                                        <Label className="flex items-center gap-2 text-sm font-bold"><Layout className="h-4 w-4 text-[#2563eb]" /> Layout do card</Label>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {LAYOUT_OPTIONS.map((layout) => (
+                                                <button
+                                                    key={layout.value}
+                                                    type="button"
+                                                    onClick={() => setNovoBanner((prev) => ({ ...prev, layout_type: layout.value }))}
+                                                    className={`rounded-2xl border p-3 text-left transition-colors ${novoBanner.layout_type === layout.value ? "border-[#2563eb] bg-blue-50 ring-2 ring-blue-200" : "border-border bg-background hover:bg-muted/40"}`}
+                                                >
+                                                    <div className="text-lg mb-1">{layout.icon}</div>
+                                                    <div className="text-xs font-semibold leading-tight">{layout.label}</div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">{LAYOUT_OPTIONS.find((l) => l.value === novoBanner.layout_type)?.description}</p>
+                                    </div>
+
+                                    <div className="space-y-4 rounded-[24px] border border-border/70 bg-muted/20 p-4">
+                                        <Label className="flex items-center gap-2 text-sm font-bold">Fonte do texto</Label>
+                                        <div className="grid grid-cols-4 gap-2">
+                                            {FONT_PRESETS.map((font) => (
+                                                <button
+                                                    key={font.value}
+                                                    type="button"
+                                                    onClick={() => setNovoBanner((prev) => ({ ...prev, font_preset: font.value }))}
+                                                    className={`rounded-2xl border p-2 text-center transition-colors ${novoBanner.font_preset === font.value ? "border-[#2563eb] bg-blue-50 ring-2 ring-blue-200" : "border-border bg-background hover:bg-muted/40"}`}
+                                                >
+                                                    <div className="text-[10px] font-bold leading-tight">{font.label}</div>
+                                                    <div className="text-[9px] text-muted-foreground truncate">{font.description}</div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="grid gap-4 md:grid-cols-3">
+                                        <div className="space-y-2 rounded-[24px] border border-border/70 bg-muted/20 p-4">
+                                            <Label className="text-xs font-bold">Estilo do botão</Label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {BUTTON_STYLES.map((style) => (
+                                                    <button
+                                                        key={style.value}
+                                                        type="button"
+                                                        onClick={() => setNovoBanner((prev) => ({ ...prev, button_style: style.value }))}
+                                                        className={`px-4 py-2 text-xs font-bold border transition-colors ${style.className} ${novoBanner.button_style === style.value ? "border-[#2563eb] bg-blue-50 text-[#2563eb] ring-2 ring-blue-200" : "border-border bg-background text-muted-foreground hover:bg-muted/40"}`}
+                                                    >
+                                                        {style.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2 rounded-[24px] border border-border/70 bg-muted/20 p-4">
+                                            <Label className="text-xs font-bold">Raio dos cantos</Label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {CORNER_RADIUS_OPTIONS.map((r) => (
+                                                    <button
+                                                        key={r.value}
+                                                        type="button"
+                                                        onClick={() => setNovoBanner((prev) => ({ ...prev, corner_radius: r.value }))}
+                                                        className={`px-3 py-2 text-xs font-bold border transition-colors ${r.className} ${novoBanner.corner_radius === r.value ? "border-[#2563eb] bg-blue-50 text-[#2563eb] ring-2 ring-blue-200" : "border-border bg-background text-muted-foreground hover:bg-muted/40"}`}
+                                                    >
+                                                        {r.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2 rounded-[24px] border border-border/70 bg-muted/20 p-4">
+                                            <Label className="text-xs font-bold">Badge / selo</Label>
+                                            <Select value={novoBanner.badge_text} onValueChange={(value) => setNovoBanner((prev) => ({ ...prev, badge_text: value }))}>
+                                                <SelectTrigger><SelectValue placeholder="Badge" /></SelectTrigger>
+                                                <SelectContent>{BADGE_OPTIONS.map((b) => <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>)}</SelectContent>
+                                            </Select>
+                                            {novoBanner.badge_text !== "none" && (
+                                                <div className="mt-2">
+                                                    <Label className="text-[10px] font-bold text-muted-foreground">Posição</Label>
+                                                    <Select value={novoBanner.badge_position} onValueChange={(value) => setNovoBanner((prev) => ({ ...prev, badge_position: value as BadgePosition }))}>
+                                                        <SelectTrigger><SelectValue placeholder="Posição" /></SelectTrigger>
+                                                        <SelectContent>{BADGE_POSITIONS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
+                                                    </Select>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {(novoBanner.layout_type === "centered" || novoBanner.layout_type === "hero") && (
+                                        <div className="space-y-4 rounded-[24px] border border-amber-200 bg-amber-50/40 p-5">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div className="space-y-1">
+                                                    <Label className="flex items-center gap-2 text-sm font-bold text-amber-700">
+                                                        Opacidade do overlay
+                                                    </Label>
+                                                    <p className="text-xs text-amber-700/70">Escurece o fundo para destacar o texto.</p>
+                                                </div>
+                                                <Badge variant="outline" className="border-amber-200 bg-white text-amber-700">
+                                                    {(novoBanner.overlay_opacity * 100).toFixed(0)}%
+                                                </Badge>
+                                            </div>
+                                            <input
+                                                type="range"
+                                                min="0.05"
+                                                max="0.85"
+                                                step="0.05"
+                                                value={novoBanner.overlay_opacity}
+                                                onChange={(event) => setNovoBanner((prev) => ({ ...prev, overlay_opacity: Number(event.target.value) }))}
+                                                className="w-full accent-[#d97706]"
+                                            />
+                                        </div>
                                     )}
 
                                     <div className="space-y-4 border-t pt-6">
@@ -1076,6 +1638,51 @@ export default function BannersManagerClient() {
                                             </div>
                                         </div>
                                     </div>
+
+                                    <div className="space-y-4 rounded-[24px] border border-border/70 bg-muted/20 p-4">
+                                        <Label className="flex items-center gap-2 text-sm font-bold">Overlay de logo</Label>
+                                        <div className="space-y-3">
+                                            <Input placeholder="https://exemplo.com/logo.png" value={novoBanner.logo_url} onChange={(event) => setNovoBanner((prev) => ({ ...prev, logo_url: event.target.value }))} />
+                                            {novoBanner.logo_url && (
+                                                <div className="flex items-center gap-3">
+                                                    <div className="relative h-12 w-12 overflow-hidden rounded-xl bg-muted shadow-sm">
+                                                        <img src={novoBanner.logo_url} alt="logo preview" className="h-full w-full object-contain" />
+                                                    </div>
+                                                    <div className="space-y-1 flex-1">
+                                                        <Label className="text-[10px] font-bold text-muted-foreground">Posição do logo</Label>
+                                                        <Select value={novoBanner.logo_position} onValueChange={(value) => setNovoBanner((prev) => ({ ...prev, logo_position: value as LogoPosition }))}>
+                                                            <SelectTrigger><SelectValue placeholder="Posição" /></SelectTrigger>
+                                                            <SelectContent>{LOGO_POSITIONS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                    <Button type="button" variant="ghost" size="icon" className="rounded-2xl text-red-500 hover:bg-red-50 hover:text-red-700" onClick={() => setNovoBanner((prev) => ({ ...prev, logo_url: "" }))}><X className="h-4 w-4" /></Button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {novoBanner.layout_type === "hero" && novoBanner.tipo_midia === "image" && (
+                                        <div className="space-y-4 rounded-[24px] border border-indigo-200 bg-indigo-50/40 p-5">
+                                            <Label className="flex items-center gap-2 text-sm font-bold text-indigo-700">Foco da imagem (hero)</Label>
+                                            <p className="text-xs text-indigo-700/70">Ajuste o ponto focal da imagem de fundo.</p>
+                                            <div className="grid gap-3 sm:grid-cols-2">
+                                                <div className="space-y-1">
+                                                    <div className="flex items-center justify-between text-xs font-semibold text-indigo-700">
+                                                        <span>Foco X</span>
+                                                        <span>{novoBanner.media_focal_x}%</span>
+                                                    </div>
+                                                    <input type="range" min="0" max="100" step="1" value={novoBanner.media_focal_x} onChange={(event) => setNovoBanner((prev) => ({ ...prev, media_focal_x: Number(event.target.value) }))} className="w-full accent-[#6366f1]" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <div className="flex items-center justify-between text-xs font-semibold text-indigo-700">
+                                                        <span>Foco Y</span>
+                                                        <span>{novoBanner.media_focal_y}%</span>
+                                                    </div>
+                                                    <input type="range" min="0" max="100" step="1" value={novoBanner.media_focal_y} onChange={(event) => setNovoBanner((prev) => ({ ...prev, media_focal_y: Number(event.target.value) }))} className="w-full accent-[#6366f1]" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="space-y-4">
@@ -1152,6 +1759,9 @@ export default function BannersManagerClient() {
                                                 {novoBanner.tipo_midia !== "banner_pronto" && <Badge variant="outline">{"Texto: "}{novoBanner.animacao_texto}</Badge>}
                                                 {novoBanner.tipo_midia !== "banner_pronto" && <Badge variant="outline">{"M\u00eddia: "}{novoBanner.animacao_midia}</Badge>}
                                                 {novoBanner.tipo_midia === "image" && <Badge variant="outline">{"Escala: "}{novoBanner.media_scale.toFixed(2)}x</Badge>}
+                                                {novoBanner.tipo_midia !== "banner_pronto" && <Badge variant="outline">{"Layout: "}{LAYOUT_OPTIONS.find((l) => l.value === novoBanner.layout_type)?.label || novoBanner.layout_type}</Badge>}
+                                                {novoBanner.tipo_midia !== "banner_pronto" && <Badge variant="outline">{"Fonte: "}{FONT_PRESETS.find((f) => f.value === novoBanner.font_preset)?.label || novoBanner.font_preset}</Badge>}
+                                                {novoBanner.tipo_midia !== "banner_pronto" && novoBanner.badge_text !== "none" && <Badge variant="outline">{"Selo: "}{novoBanner.badge_text}</Badge>}
                                                 <Badge variant="outline">{"Ordem: "}{novoBanner.ordem}</Badge>
                                             </div>
                                             <div className="rounded-2xl bg-muted/60 p-4 text-muted-foreground">{destinationSummary}</div>
@@ -1217,6 +1827,19 @@ export default function BannersManagerClient() {
                                 media_offset_x: banner.media_offset_x ?? 0,
                                 media_offset_y: banner.media_offset_y ?? 0,
                                  intensidade_animacao: (banner as any).intensidade_animacao ?? 1,
+                                layout_type: (banner as any).layout_type || "text-left",
+                                font_preset: (banner as any).font_preset || "impact",
+                                badge_text: (banner as any).badge_text || "none",
+                                badge_position: (banner as any).badge_position || "top-right",
+                                button_style: (banner as any).button_style || "pill",
+                                corner_radius: (banner as any).corner_radius || "rounded",
+                                overlay_opacity: (banner as any).overlay_opacity ?? 0.4,
+                                animacao_texto_tipo: (banner as any).animacao_texto_tipo || "entrance",
+                                intensidade_animacao_texto: (banner as any).intensidade_animacao_texto ?? 1,
+                                logo_url: (banner as any).logo_url || "",
+                                logo_position: (banner as any).logo_position || "top-left",
+                                media_focal_x: (banner as any).media_focal_x ?? 50,
+                                media_focal_y: (banner as any).media_focal_y ?? 50,
                             }
 
                             return (
@@ -1234,7 +1857,7 @@ export default function BannersManagerClient() {
                                                 </div>
                                                 <div className="grid gap-2 text-sm text-muted-foreground">
                                                     {hydratedBanner.tipo_midia !== "banner_pronto" && <div className="rounded-2xl bg-muted/50 px-4 py-3">Botão: <span className="font-semibold text-foreground">{banner.botao_texto || "Pedir agora"}</span></div>}
-                                                    {hydratedBanner.tipo_midia !== "banner_pronto" && <div className="rounded-2xl bg-muted/50 px-4 py-3">Texto: {hydratedBanner.animacao_texto} • Mídia: {hydratedBanner.animacao_midia}{hydratedBanner.tipo_midia === "image" ? ` • Escala ${hydratedBanner.media_scale?.toFixed(2)}x` : ""}</div>}
+                                                    {hydratedBanner.tipo_midia !== "banner_pronto" && <div className="rounded-2xl bg-muted/50 px-4 py-3">Texto: {hydratedBanner.animacao_texto} • Mídia: {hydratedBanner.animacao_midia} • Layout: {LAYOUT_OPTIONS.find(l => l.value === hydratedBanner.layout_type)?.label || hydratedBanner.layout_type} • Fonte: {FONT_PRESETS.find(f => f.value === hydratedBanner.font_preset)?.label || hydratedBanner.font_preset} • Botão: {BUTTON_STYLES.find(s => s.value === hydratedBanner.button_style)?.label || hydratedBanner.button_style} • Raio: {CORNER_RADIUS_OPTIONS.find(r => r.value === hydratedBanner.corner_radius)?.label || hydratedBanner.corner_radius}{hydratedBanner.tipo_midia === "image" ? ` • Escala ${hydratedBanner.media_scale?.toFixed(2)}x` : ""}</div>}
                                                     {banner.horario_inicio && <div className="rounded-2xl bg-muted/50 px-4 py-3">Janela ativa: {banner.horario_inicio} - {banner.horario_fim || "23:59"}</div>}
                                                 </div>
                                                 <div className="flex gap-2">
