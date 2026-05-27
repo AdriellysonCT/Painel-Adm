@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { formatCurrencyBRL } from "@/components/format"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Search, ChevronLeft, ChevronRight, TrendingUp, CircleDollarSign, CreditCard, Receipt, Wallet } from "lucide-react"
+import { Search, ChevronLeft, ChevronRight, CircleDollarSign, CreditCard, Receipt, Wallet, Info, Calculator } from "lucide-react"
 
 type EntregaLedger = {
   ledger_id: string
@@ -48,31 +48,12 @@ type ExtratoResponse = {
 
 const PAYMENT_LABELS: Record<string, string> = {
   pix: "Pix",
-  credito: "Cartão",
+  credito: "Cartão de Crédito",
   dinheiro: "Dinheiro",
 }
 
-const PAYMENT_COLORS: Record<string, string> = {
-  pix: "bg-[#f0fdf4] text-[#15803d] border-none",
-  credito: "bg-[#eff6ff] text-[#2563eb] border-none",
-  dinheiro: "bg-[#fef3c7] text-[#b45309] border-none",
-}
-
-function Card({ className = "", children }: { className?: string; children: React.ReactNode }) {
-  return <div className={`bg-white border border-[#e2e8f0] rounded-xl shadow-sm ${className}`}>{children}</div>
-}
-
-function StatCard({ icon, label, value, sub, color }: { icon: React.ReactNode; label: string; value: string; sub?: string; color: string }) {
-  return (
-    <div className={`relative overflow-hidden rounded-xl border p-5 ${color}`}>
-      <div className="flex items-start justify-between mb-2">
-        <span className="text-[11px] font-bold uppercase tracking-widest text-[#64748b]">{label}</span>
-        <span className="text-inherit opacity-70">{icon}</span>
-      </div>
-      <div className="text-2xl font-bold text-[#0b1c30] font-mono tracking-tight">{value}</div>
-      {sub && <div className="mt-1.5 text-xs text-[#64748b]">{sub}</div>}
-    </div>
-  )
+function formatDate(d: string) {
+  return new Date(d).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
 }
 
 export default function LedgerEntregadoresClient() {
@@ -83,251 +64,377 @@ export default function LedgerEntregadoresClient() {
   const [selectedEntregador, setSelectedEntregador] = useState<EntregadorLedger | null>(null)
   const [extratoData, setExtratoData] = useState<ExtratoResponse | null>(null)
   const [loadingExtrato, setLoadingExtrato] = useState(false)
-  const [extratoTab, setExtratoTab] = useState<"all" | "cash" | "online">("all")
+  const [extratoTab, setExtratoTab] = useState<"cash" | "online">("cash")
 
   useEffect(() => { fetchData() }, [])
 
   async function fetchData() {
     setLoading(true)
     try {
-      const res = await fetch('/api/entregadores/ledger-resumo')
-      if (!res.ok) throw new Error('Falha ao carregar dados')
+      const res = await fetch("/api/entregadores/ledger-resumo")
+      if (!res.ok) throw new Error("Falha ao carregar dados")
       const data = await res.json()
       setEntregadores(data.entregadores || [])
       setTotais(data.totais)
     } catch (e) {
-      console.error('Erro ao buscar ledger:', e)
+      console.error("Erro ao buscar ledger:", e)
     } finally { setLoading(false) }
   }
 
   async function fetchExtrato(entregadorId: string) {
     setLoadingExtrato(true)
-    setExtratoTab("all")
+    setExtratoTab("cash")
     try {
       const res = await fetch(`/api/entregadores/ledger-resumo?entregador_id=${entregadorId}`)
-      if (!res.ok) throw new Error('Falha ao carregar extrato')
+      if (!res.ok) throw new Error("Falha ao carregar extrato")
       const data: ExtratoResponse = await res.json()
       setExtratoData(data)
     } catch (e) {
-      console.error('Erro ao buscar extrato:', e)
+      console.error("Erro ao buscar extrato:", e)
       setExtratoData(null)
     } finally { setLoadingExtrato(false) }
   }
 
   const filtered = entregadores.filter(e => e.nome.toLowerCase().includes(search.toLowerCase()))
 
-  const visibleEntries = extratoData?.extrato || []
-  const tabEntries = extratoTab === "cash" ? extratoData?.cash_entries || []
-    : extratoTab === "online" ? extratoData?.online_entries || []
-    : visibleEntries
-
   return (
     <div className="space-y-6">
       {loading ? (
-        <div className="flex justify-center py-20">
-          <div className="animate-spin h-8 w-8 border-4 border-[#2563eb] border-t-transparent rounded-full" />
-        </div>
+        <div className="flex justify-center py-20"><div className="animate-spin h-8 w-8 border-4 border-[#2563eb] border-t-transparent rounded-full" /></div>
       ) : !selectedEntregador ? (
         <>
           {totais && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard
-                icon={<CircleDollarSign className="h-5 w-5" />}
-                label="Entregas em Dinheiro"
-                value={`${totais.qtd_cash}x • ${formatCurrencyBRL(totais.total_cash)}`}
-                sub="Entregador recebe direto do cliente — sem taxa da plataforma"
-                color="bg-[#fef3c7] border-[#fde68a]"
-              />
-              <StatCard
-                icon={<CreditCard className="h-5 w-5" />}
-                label="Entregas Online (Pix/Cartão)"
-                value={`${totais.qtd_online}x • ${formatCurrencyBRL(totais.total_online)}`}
-                sub={`Taxa plataforma: ${formatCurrencyBRL(totais.total_taxa_plataforma)} (R$1 ou R$2 por entrega)`}
-                color="bg-[#e0f2fe] border-[#bae6fd]"
-              />
-              <StatCard
-                icon={<Receipt className="h-5 w-5" />}
-                label="Total Taxa Plataforma"
-                value={formatCurrencyBRL(totais.total_taxa_plataforma)}
-                sub={`Descontado das entregas online`}
-                color="bg-white border-[#cbd5e1]"
-              />
-              <StatCard
-                icon={<Wallet className="h-5 w-5" />}
-                label="Saldo Líquido Online"
-                value={formatCurrencyBRL(totais.saldo_online_liquido)}
-                sub={`Total online - taxa plataforma`}
-                color="bg-white border-[#2563eb] shadow-[0_0_0_1px_#2563eb]"
-              />
+              <div className="rounded-xl border border-[#fde68a] bg-[#fef3c7] p-5">
+                <div className="flex items-start justify-between mb-2">
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-[#64748b]">Entregas em Dinheiro</span>
+                  <CircleDollarSign className="h-5 w-5 text-[#b45309]" />
+                </div>
+                <div className="text-xl font-bold text-[#0b1c30] font-mono">{totais.qtd_cash}x entregas</div>
+                <div className="text-lg font-mono text-[#b45309] font-bold">{formatCurrencyBRL(totais.total_cash)}</div>
+                <div className="mt-1.5 text-[11px] text-[#64748b]">Entregador recebe direto do cliente. Sem taxa da plataforma.</div>
+              </div>
+              <div className="rounded-xl border border-[#bae6fd] bg-[#e0f2fe] p-5">
+                <div className="flex items-start justify-between mb-2">
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-[#64748b]">Entregas Online (Pix/Cartão)</span>
+                  <CreditCard className="h-5 w-5 text-[#0369a1]" />
+                </div>
+                <div className="text-xl font-bold text-[#0b1c30] font-mono">{totais.qtd_online}x entregas</div>
+                <div className="text-lg font-mono text-[#0369a1] font-bold">{formatCurrencyBRL(totais.total_online)}</div>
+                <div className="mt-1.5 text-[11px] text-[#64748b]">Taxa da plataforma se aplica (R$1 ou R$2 por entrega).</div>
+              </div>
+              <div className="rounded-xl border border-[#fecaca] bg-[#fef2f2] p-5">
+                <div className="flex items-start justify-between mb-2">
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-[#64748b]">Total Taxa Plataforma</span>
+                  <Receipt className="h-5 w-5 text-[#b91c1c]" />
+                </div>
+                <div className="text-2xl font-bold text-[#b91c1c] font-mono">{formatCurrencyBRL(totais.total_taxa_plataforma)}</div>
+                <div className="mt-1.5 text-[11px] text-[#64748b]">Valor total descontado das entregas online.</div>
+              </div>
+              <div className="rounded-xl border-2 border-[#059669] bg-white p-5 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1.5 h-full bg-[#059669]" />
+                <div className="flex items-start justify-between mb-2">
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-[#64748b]">Valor Líquido a Repassar</span>
+                  <Wallet className="h-5 w-5 text-[#059669]" />
+                </div>
+                <div className="text-2xl font-bold text-[#059669] font-mono">{formatCurrencyBRL(totais.saldo_online_liquido)}</div>
+                <div className="mt-1.5 text-[11px] text-[#64748b]">{formatCurrencyBRL(totais.total_online)} (online) - {formatCurrencyBRL(totais.total_taxa_plataforma)} (taxa) = <strong>{formatCurrencyBRL(totais.saldo_online_liquido)}</strong></div>
+              </div>
             </div>
           )}
 
-          <Card>
-            <div className="p-5 border-b border-[#e2e8f0] flex flex-wrap items-center justify-between gap-3">
+          <div className="rounded-xl border border-[#e2e8f0] bg-white shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e2e8f0] p-5">
               <h4 className="font-bold text-[#0b1c30]">Entregadores</h4>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
                 <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-[#cbd5e1] rounded-lg text-sm w-56" />
+                  className="w-56 border border-[#cbd5e1] rounded-lg pl-10 pr-4 py-2 text-sm" />
               </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full border-collapse text-left">
                 <thead>
-                  <tr className="bg-[#f8fafc] border-b border-[#e2e8f0]">
+                  <tr className="border-b border-[#e2e8f0] bg-[#f8fafc]">
                     <th className="px-5 py-3.5 text-[11px] font-bold uppercase tracking-wider text-[#64748b]">Entregador</th>
-                    <th className="px-5 py-3.5 text-[11px] font-bold uppercase tracking-wider text-[#64748b] text-right" colSpan={2}>Dinheiro</th>
-                    <th className="px-5 py-3.5 text-[11px] font-bold uppercase tracking-wider text-[#64748b] text-right" colSpan={2}>Online (Pix/Cartão)</th>
-                    <th className="px-5 py-3.5 text-[11px] font-bold uppercase tracking-wider text-[#64748b] text-right">Taxa Plataforma</th>
-                    <th className="px-5 py-3.5 text-[11px] font-bold uppercase tracking-wider text-[#64748b] text-right">Líquido Online</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold uppercase tracking-wider text-[#64748b] text-right">Dinheiro</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold uppercase tracking-wider text-[#64748b] text-right">Online</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold uppercase tracking-wider text-[#b91c1c] text-right">(-) Taxa Plataforma</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold uppercase tracking-wider text-[#059669] text-right">(=) Líquido a Repassar</th>
                     <th className="px-5 py-3.5"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#e2e8f0]">
                   {filtered.length === 0 ? (
-                    <tr><td colSpan={8} className="px-5 py-12 text-center text-sm text-[#64748b]">Nenhum entregador encontrado</td></tr>
+                    <tr><td colSpan={6} className="px-5 py-12 text-center text-sm text-[#64748b]">Nenhum entregador encontrado</td></tr>
                   ) : filtered.map((e) => (
-                    <tr key={e.entregador_id} className="hover:bg-[#f8fafc] transition-colors cursor-pointer"
+                    <tr key={e.entregador_id} className="cursor-pointer transition-colors hover:bg-[#f8fafc]"
                       onClick={() => { setSelectedEntregador(e); fetchExtrato(e.entregador_id) }}>
                       <td className="px-5 py-4">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-[#0b1c30]">{e.nome}</span>
+                        <span className="text-sm font-bold text-[#0b1c30]">{e.nome}</span>
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        <div className="inline-flex items-center gap-1.5 rounded-md bg-[#fef3c7] px-2 py-0.5 text-[11px] font-bold text-[#b45309]">
+                          {e.qtd_cash}x <span className="font-mono">{formatCurrencyBRL(e.total_cash)}</span>
                         </div>
                       </td>
                       <td className="px-5 py-4 text-right">
-                        <Badge className="bg-[#fef3c7] text-[#b45309] border-none font-bold">{e.qtd_cash}x</Badge>
+                        <div className="inline-flex items-center gap-1.5 rounded-md bg-[#e0f2fe] px-2 py-0.5 text-[11px] font-bold text-[#0369a1]">
+                          {e.qtd_online}x <span className="font-mono">{formatCurrencyBRL(e.total_online)}</span>
+                        </div>
                       </td>
-                      <td className="px-5 py-4 text-right font-mono text-sm text-[#0b1c30]">{formatCurrencyBRL(e.total_cash)}</td>
-                      <td className="px-5 py-4 text-right">
-                        <Badge className="bg-[#e0f2fe] text-[#0369a1] border-none font-bold">{e.qtd_online}x</Badge>
-                      </td>
-                      <td className="px-5 py-4 text-right font-mono text-sm text-[#0b1c30]">{formatCurrencyBRL(e.total_online)}</td>
-                      <td className="px-5 py-4 text-right font-mono text-sm text-[#b91c1c] font-bold">-{formatCurrencyBRL(e.total_taxa_plataforma)}</td>
+                      <td className="px-5 py-4 text-right font-mono text-sm font-bold text-[#b91c1c]">{formatCurrencyBRL(e.total_taxa_plataforma)}</td>
                       <td className="px-5 py-4 text-right font-mono text-sm font-bold text-[#059669]">{formatCurrencyBRL(e.saldo_online_liquido)}</td>
-                      <td className="px-5 py-4 text-right">
-                        <span className="material-symbols-outlined text-[#94a3b8] text-[20px]">chevron_right</span>
-                      </td>
+                      <td className="px-5 py-4 text-right"><span className="material-symbols-outlined text-[#94a3b8] text-[20px]">chevron_right</span></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div className="px-5 py-3 border-t border-[#e2e8f0] bg-[#f8fafc] flex items-center justify-between">
+            <div className="flex items-center justify-between border-t border-[#e2e8f0] bg-[#f8fafc] px-5 py-3">
               <span className="text-xs text-[#64748b]">{filtered.length} de {entregadores.length} entregadores</span>
               <div className="flex items-center gap-2">
-                <button className="p-1.5 border border-[#cbd5e1] rounded hover:bg-white disabled:opacity-40" disabled><ChevronLeft className="h-4 w-4 text-[#64748b]" /></button>
-                <span className="px-3 py-1 bg-[#2563eb] text-white rounded text-xs font-bold">1</span>
-                <button className="p-1.5 border border-[#cbd5e1] rounded hover:bg-white"><ChevronRight className="h-4 w-4 text-[#64748b]" /></button>
+                <button className="rounded border border-[#cbd5e1] p-1.5 hover:bg-white disabled:opacity-40" disabled><ChevronLeft className="h-4 w-4 text-[#64748b]" /></button>
+                <span className="rounded bg-[#2563eb] px-3 py-1 text-xs font-bold text-white">1</span>
+                <button className="rounded border border-[#cbd5e1] p-1.5 hover:bg-white"><ChevronRight className="h-4 w-4 text-[#64748b]" /></button>
               </div>
             </div>
-          </Card>
+          </div>
         </>
-      ) : (
+      ) : extratoData && (
         <div className="space-y-5">
           <button onClick={() => { setSelectedEntregador(null); setExtratoData(null) }}
-            className="flex items-center gap-2 text-sm text-[#64748b] hover:text-[#2563eb] transition-colors">
+            className="flex items-center gap-2 text-sm text-[#64748b] transition-colors hover:text-[#2563eb]">
             <ChevronLeft className="h-4 w-4" /> Voltar para lista
           </button>
 
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-6">
+          <div className="rounded-xl border border-[#e2e8f0] bg-white shadow-sm p-6">
+            <div className="mb-6 flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-bold text-[#0b1c30]">{selectedEntregador.nome}</h3>
-                <p className="text-sm text-[#64748b]">Detalhamento de entregas e taxas</p>
+                <h3 className="text-xl font-bold text-[#0b1c30]">{extratoData.entregador.nome}</h3>
+                <p className="text-sm text-[#64748b]">Resumo financeiro completo</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="bg-[#fef3c7] border border-[#fde68a] rounded-xl p-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#64748b] mb-1">Dinheiro</p>
-                <p className="text-lg font-bold text-[#0b1c30] font-mono">{selectedEntregador.qtd_cash}x entregas</p>
-                <p className="text-sm font-mono text-[#b45309] mt-0.5">{formatCurrencyBRL(selectedEntregador.total_cash)}</p>
-                <p className="text-[10px] text-[#64748b] mt-1">Sem taxa da plataforma</p>
+            <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+              <div className="rounded-xl border border-[#fde68a] bg-[#fef3c7] p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#64748b]">Dinheiro</p>
+                <p className="mt-0.5 text-lg font-bold text-[#0b1c30] font-mono">{extratoData.resumo.qtd_cash}x entregas</p>
+                <p className="font-mono text-sm text-[#b45309]">{formatCurrencyBRL(extratoData.resumo.total_cash)}</p>
+                <p className="mt-1 text-[10px] text-[#64748b]">Sem taxa da plataforma</p>
               </div>
-              <div className="bg-[#e0f2fe] border border-[#bae6fd] rounded-xl p-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#64748b] mb-1">Online (Pix/Cartão)</p>
-                <p className="text-lg font-bold text-[#0b1c30] font-mono">{selectedEntregador.qtd_online}x entregas</p>
-                <p className="text-sm font-mono text-[#0369a1] mt-0.5">{formatCurrencyBRL(selectedEntregador.total_online)}</p>
+              <div className="rounded-xl border border-[#bae6fd] bg-[#e0f2fe] p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#64748b]">Online (Pix/Cartão)</p>
+                <p className="mt-0.5 text-lg font-bold text-[#0b1c30] font-mono">{extratoData.resumo.qtd_online}x entregas</p>
+                <p className="font-mono text-sm text-[#0369a1]">{formatCurrencyBRL(extratoData.resumo.total_online)}</p>
               </div>
-              <div className="bg-[#fef2f2] border border-[#fecaca] rounded-xl p-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#64748b] mb-1">Taxa Plataforma</p>
-                <p className="text-lg font-bold text-[#b91c1c] font-mono">-{formatCurrencyBRL(selectedEntregador.total_taxa_plataforma)}</p>
-                <p className="text-[10px] text-[#64748b] mt-1">{selectedEntregador.qtd_online} entregas × R${selectedEntregador.qtd_online > 0 ? (selectedEntregador.total_taxa_plataforma / selectedEntregador.qtd_online).toFixed(0) : "0"}</p>
-                <p className="text-[10px] text-[#64748b]">R$1 (taxa &lt; R$5) • R$2 (taxa &ge; R$5)</p>
+              <div className="rounded-xl border border-[#fecaca] bg-[#fef2f2] p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#64748b]">Taxa Plataforma</p>
+                <p className="mt-0.5 text-lg font-bold text-[#b91c1c] font-mono">{formatCurrencyBRL(extratoData.resumo.total_taxa_plataforma)}</p>
+                <p className="mt-1 text-[10px] text-[#64748b]">
+                  {extratoData.resumo.qtd_online > 0
+                    ? `R$ ${(extratoData.resumo.total_taxa_plataforma / extratoData.resumo.qtd_online).toFixed(0)} por entrega`
+                    : "Nenhuma entrega online"}
+                </p>
               </div>
-              <div className="bg-white border-2 border-[#059669] rounded-xl p-4 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full bg-[#059669]" />
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#64748b] mb-1">A Receber (Online)</p>
-                <p className="text-lg font-bold text-[#059669] font-mono">{formatCurrencyBRL(selectedEntregador.saldo_online_liquido)}</p>
-                <p className="text-[10px] text-[#64748b] mt-1">{formatCurrencyBRL(selectedEntregador.total_online)} - {formatCurrencyBRL(selectedEntregador.total_taxa_plataforma)}</p>
+              <div className="relative overflow-hidden rounded-xl border-2 border-[#059669] bg-white p-4">
+                <div className="absolute left-0 top-0 h-full w-1 bg-[#059669]" />
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#64748b]">A Receber (Online)</p>
+                <p className="mt-0.5 text-lg font-bold text-[#059669] font-mono">{formatCurrencyBRL(extratoData.resumo.saldo_online_liquido)}</p>
+                <p className="mt-1 text-[10px] text-[#64748b]">{formatCurrencyBRL(extratoData.resumo.total_online)} - {formatCurrencyBRL(extratoData.resumo.total_taxa_plataforma)}</p>
               </div>
             </div>
 
-            <div className="border-t border-[#e2e8f0] pt-6">
-              <div className="flex items-center gap-3 mb-4">
-                <h4 className="font-bold text-[#0b1c30]">Extrato de Entregas</h4>
-                <div className="flex gap-1">
-                  {(["all", "cash", "online"] as const).map(tab => (
-                    <button key={tab} onClick={() => setExtratoTab(tab)}
-                      className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${
-                        extratoTab === tab ? "bg-[#2563eb] text-white" : "bg-[#f1f5f9] text-[#64748b] hover:bg-[#e2e8f0]"
-                      }`}>
-                      {tab === "all" ? "Todas" : tab === "cash" ? "Dinheiro" : "Online"}
-                    </button>
-                  ))}
-                </div>
+            <div className="mb-4 flex flex-wrap items-center gap-3">
+              <div className="flex gap-1">
+                {(["cash", "online"] as const).map(tab => (
+                  <button key={tab} onClick={() => setExtratoTab(tab)}
+                    className={`rounded-lg px-4 py-2 text-xs font-bold transition-all ${
+                      extratoTab === tab
+                        ? tab === "cash" ? "bg-[#b45309] text-white" : "bg-[#0369a1] text-white"
+                        : "bg-[#f1f5f9] text-[#64748b] hover:bg-[#e2e8f0]"
+                    }`}>
+                    {tab === "cash" ? `Dinheiro (${extratoData.cash_entries.length})` : `Online (${extratoData.online_entries.length})`}
+                  </button>
+                ))}
               </div>
-
-              {loadingExtrato ? (
-                <div className="flex justify-center py-8"><div className="animate-spin h-6 w-6 border-4 border-[#2563eb] border-t-transparent rounded-full" /></div>
-              ) : tabEntries.length === 0 ? (
-                <p className="text-sm text-[#64748b] py-4 text-center">Nenhuma entrega nesta categoria.</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-[#f8fafc] border-b border-[#e2e8f0]">
-                        <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b]">Data</th>
-                        <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b]">Pedido</th>
-                        <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b]">Pagamento</th>
-                        <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b] text-right">Taxa Entrega</th>
-                        <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b] text-right">Taxa Plataforma</th>
-                        <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b] text-right">Valor Entregador</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#e2e8f0]">
-                      {tabEntries.map((l) => (
-                        <tr key={l.ledger_id} className="hover:bg-[#fafafa] transition-colors">
-                          <td className="px-4 py-3 text-xs font-mono text-[#0b1c30]">
-                            {new Date(l.criado_em).toLocaleString('pt-BR')}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-[#0b1c30]">#{l.numero_pedido}</td>
-                          <td className="px-4 py-3">
-                            <Badge className={`${PAYMENT_COLORS[l.metodo_pagamento] || "bg-[#f1f5f9] text-[#64748b] border-none"} text-[11px]`}>
-                              {PAYMENT_LABELS[l.metodo_pagamento] || l.metodo_pagamento}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3 text-right font-mono text-sm text-[#0b1c30]">
-                            {formatCurrencyBRL(l.taxa_entrega)}
-                          </td>
-                          <td className="px-4 py-3 text-right font-mono text-sm">
-                            {l.tipo_pagamento === "online" ? (
-                              <span className="text-[#b91c1c] font-bold">-{formatCurrencyBRL(l.taxa_plataforma)}</span>
-                            ) : <span className="text-[#059669]">—</span>}
-                          </td>
-                          <td className="px-4 py-3 text-right font-mono text-sm font-bold text-[#0b1c30]">
-                            {l.tipo_pagamento === "online"
-                              ? formatCurrencyBRL(l.valor_entrega - l.taxa_plataforma)
-                              : formatCurrencyBRL(l.valor_entrega)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
             </div>
-          </Card>
+
+            {loadingExtrato ? (
+              <div className="flex justify-center py-8"><div className="animate-spin h-6 w-6 border-4 border-[#2563eb] border-t-transparent rounded-full" /></div>
+            ) : (
+              <>
+                {extratoTab === "cash" ? (
+                  extratoData.cash_entries.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-[#64748b]">Nenhuma entrega em dinheiro.</p>
+                  ) : (
+                    <div className="overflow-hidden rounded-xl border border-[#e2e8f0]">
+                      <div className="border-b border-[#fde68a] bg-[#fef3c7] px-5 py-3">
+                        <div className="flex items-center gap-2">
+                          <CircleDollarSign className="h-4 w-4 text-[#b45309]" />
+                          <span className="text-xs font-bold uppercase tracking-wider text-[#b45309]">Entregas em Dinheiro</span>
+                        </div>
+                        <p className="mt-0.5 text-[11px] text-[#64748b]">
+                          Entregador recebeu o valor total do cliente. <strong>Não há taxa da plataforma</strong> — o entregador fica com o valor integral da entrega.
+                          Na prática, ele já recebeu esse dinheiro na hora da entrega.
+                        </p>
+                      </div>
+                      <table className="w-full border-collapse text-left">
+                        <thead>
+                          <tr className="border-b border-[#e2e8f0] bg-[#fafafa]">
+                            <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b]">Data</th>
+                            <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b]">Pedido</th>
+                            <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b]">Pagamento</th>
+                            <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b] text-right">Taxa Entrega</th>
+                            <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b] text-right">Valor do Entregador</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#e2e8f0]">
+                          {extratoData.cash_entries.map(l => (
+                            <tr key={l.ledger_id} className="transition-colors hover:bg-[#fffbeb]">
+                              <td className="px-4 py-3 font-mono text-xs text-[#0b1c30]">{formatDate(l.criado_em)}</td>
+                              <td className="px-4 py-3 text-sm text-[#0b1c30]">#{l.numero_pedido}</td>
+                              <td className="px-4 py-3">
+                                <span className="inline-flex items-center gap-1 rounded-md bg-[#fef3c7] px-2 py-0.5 text-[11px] font-bold text-[#b45309]">
+                                  <span className="material-symbols-outlined text-[12px]">payments</span> Dinheiro
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-right font-mono text-sm text-[#0b1c30]">{formatCurrencyBRL(l.taxa_entrega)}</td>
+                              <td className="px-4 py-3 text-right font-mono text-sm font-bold text-[#059669]">+{formatCurrencyBRL(l.valor_entrega)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="border-t-2 border-[#fde68a] bg-[#fffbeb]">
+                            <td colSpan={4} className="px-4 py-3 text-right text-sm font-bold text-[#0b1c30]">Total Dinheiro:</td>
+                            <td className="px-4 py-3 text-right font-mono text-sm font-bold text-[#b45309]">{formatCurrencyBRL(extratoData.resumo.total_cash)}</td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  )
+                ) : (
+                  extratoData.online_entries.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-[#64748b]">Nenhuma entrega online.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="rounded-xl border border-[#bae6fd] bg-[#f0f9ff] px-5 py-4">
+                        <div className="flex items-start gap-3">
+                          <Info className="mt-0.5 h-5 w-5 shrink-0 text-[#0369a1]" />
+                          <div>
+                            <p className="text-sm font-bold text-[#0369a1]">Regra de Taxa da Plataforma</p>
+                            <p className="mt-1 text-[13px] text-[#64748b] leading-relaxed">
+                              Para cada entrega online (Pix/Cartão), a plataforma cobra uma taxa do valor que seria repassado ao entregador:
+                            </p>
+                            <ul className="mt-1.5 space-y-0.5 text-[13px] text-[#64748b]">
+                              <li className="flex items-center gap-2">
+                                <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#fef3c7] text-[11px] font-bold text-[#b45309]">R$1</span>
+                                Quando a <strong>taxa de entrega</strong> for <strong>menor que R$5,00</strong>
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#fef2f2] text-[11px] font-bold text-[#b91c1c]">R$2</span>
+                                Quando a <strong>taxa de entrega</strong> for <strong>igual ou maior que R$5,00</strong>
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="overflow-hidden rounded-xl border border-[#e2e8f0]">
+                        <div className="border-b border-[#bae6fd] bg-[#e0f2fe] px-5 py-3">
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="h-4 w-4 text-[#0369a1]" />
+                            <span className="text-xs font-bold uppercase tracking-wider text-[#0369a1]">Entregas Online (Pix/Cartão)</span>
+                          </div>
+                          <p className="mt-0.5 text-[11px] text-[#64748b]">
+                            A taxa da plataforma é descontada do valor da entrega. O entregador recebe o valor líquido (entrega - taxa).
+                          </p>
+                        </div>
+                        <table className="w-full border-collapse text-left">
+                          <thead>
+                            <tr className="border-b border-[#e2e8f0] bg-[#fafafa]">
+                              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b]">Data</th>
+                              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b]">Pedido</th>
+                              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b]">Pagamento</th>
+                              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b] text-right">Taxa Entrega</th>
+                              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#b91c1c] text-right">(-) Taxa Plataforma</th>
+                              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#059669] text-right">(=) Valor Líquido</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#e2e8f0]">
+                            {extratoData.online_entries.map(l => (
+                              <tr key={l.ledger_id} className="transition-colors hover:bg-[#f0f9ff]">
+                                <td className="px-4 py-3 font-mono text-xs text-[#0b1c30]">{formatDate(l.criado_em)}</td>
+                                <td className="px-4 py-3 text-sm text-[#0b1c30]">#{l.numero_pedido}</td>
+                                <td className="px-4 py-3">
+                                  <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-bold ${
+                                    l.metodo_pagamento === "pix" ? "bg-[#f0fdf4] text-[#15803d]" : "bg-[#eff6ff] text-[#2563eb]"
+                                  }`}>
+                                    <span className="material-symbols-outlined text-[12px]">
+                                      {l.metodo_pagamento === "pix" ? "qr_code" : "credit_card"}
+                                    </span>
+                                    {PAYMENT_LABELS[l.metodo_pagamento] || l.metodo_pagamento}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-right font-mono text-sm text-[#0b1c30]">{formatCurrencyBRL(l.taxa_entrega)}</td>
+                                <td className="px-4 py-3 text-right">
+                                  <div className="inline-flex items-center gap-1 rounded-md bg-[#fef2f2] px-2 py-0.5 text-[11px] font-bold text-[#b91c1c]">
+                                    -{formatCurrencyBRL(l.taxa_plataforma)}
+                                    <span className="text-[10px] text-[#64748b] font-normal">
+                                      (R${l.taxa_entrega >= 5 ? "2" : "1"} — {l.taxa_entrega >= 5 ? "≥ R$5" : "< R$5"})
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-right font-mono text-sm font-bold text-[#059669]">
+                                  +{formatCurrencyBRL(l.valor_entrega - l.taxa_plataforma)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot className="border-t-2 border-[#bae6fd]">
+                            <tr className="bg-[#f0f9ff]">
+                              <td colSpan={3} className="px-4 py-3 text-sm font-bold text-[#0b1c30]">Totais Online</td>
+                              <td className="px-4 py-3 text-right font-mono text-sm font-bold text-[#0b1c30]">{formatCurrencyBRL(extratoData.resumo.total_online)}</td>
+                              <td className="px-4 py-3 text-right font-mono text-sm font-bold text-[#b91c1c]">-{formatCurrencyBRL(extratoData.resumo.total_taxa_plataforma)}</td>
+                              <td className="px-4 py-3 text-right font-mono text-sm font-bold text-[#059669]">{formatCurrencyBRL(extratoData.resumo.saldo_online_liquido)}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+
+                      <div className="rounded-xl border-2 border-[#059669] bg-white p-5">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Calculator className="h-5 w-5 text-[#059669]" />
+                          <span className="text-sm font-bold text-[#0b1c30]">Conta Final — {extratoData.entregador.nome}</span>
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center justify-between py-1.5">
+                            <span className="text-[#64748b]">Total de entregas online</span>
+                            <span className="font-mono font-bold text-[#0b1c30]">{formatCurrencyBRL(extratoData.resumo.total_online)}</span>
+                          </div>
+                          <div className="flex items-center justify-between py-1.5 border-t border-dashed border-[#e2e8f0]">
+                            <span className="text-[#b91c1c]">(-) Taxa da plataforma ({extratoData.resumo.qtd_online} entregas)</span>
+                            <span className="font-mono font-bold text-[#b91c1c]">-{formatCurrencyBRL(extratoData.resumo.total_taxa_plataforma)}</span>
+                          </div>
+                          <div className="flex items-center justify-between py-2 border-t-2 border-[#059669] bg-[#f0fdf4] -mx-5 px-5 rounded-b-xl">
+                            <span className="font-bold text-[#059669]">Valor a Repassar ao Entregador</span>
+                            <span className="font-mono text-lg font-bold text-[#059669]">{formatCurrencyBRL(extratoData.resumo.saldo_online_liquido)}</span>
+                          </div>
+
+                          {extratoData.resumo.qtd_cash > 0 && (
+                            <div className="mt-3 rounded-lg bg-[#fef3c7] border border-[#fde68a] p-3 text-xs text-[#b45309]">
+                              <p className="font-bold mb-0.5">💡 Sobre as entregas em dinheiro ({extratoData.resumo.qtd_cash}x)</p>
+                              <p>O entregador já recebeu <strong>{formatCurrencyBRL(extratoData.resumo.total_cash)}</strong> diretamente dos clientes nessas entregas. Esse valor não passa pela plataforma — não há taxa a cobrar.</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                )}
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>
