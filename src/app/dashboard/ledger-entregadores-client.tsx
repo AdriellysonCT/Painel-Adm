@@ -1,14 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { formatCurrencyBRL } from "@/components/format"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { formatCurrencyBRL } from "@/components/format"
-import { Banknote, CreditCard, TrendingDown, AlertCircle, Loader2, Search, ArrowUpDown, ChevronRight, DollarSign, Wallet } from "lucide-react"
+import { Search, ChevronLeft, ChevronRight } from "lucide-react"
 
 type LancamentoLedger = {
   id: string
@@ -57,13 +53,10 @@ export default function LedgerEntregadoresClient() {
   const [entregadores, setEntregadores] = useState<EntregadorLedger[]>([])
   const [totais, setTotais] = useState<Record<string, number> | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
-  const [sort, setSort] = useState("nome")
   const [selectedEntregador, setSelectedEntregador] = useState<EntregadorLedger | null>(null)
   const [extrato, setExtrato] = useState<LancamentoLedger[]>([])
   const [loadingExtrato, setLoadingExtrato] = useState(false)
-  const [dialogOpen, setDialogOpen] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -71,19 +64,14 @@ export default function LedgerEntregadoresClient() {
 
   async function fetchData() {
     setLoading(true)
-    setError(null)
     try {
       const res = await fetch('/api/entregadores/ledger-resumo')
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data?.error || 'Falha ao carregar dados')
-      }
+      if (!res.ok) throw new Error('Falha ao carregar dados')
       const data = await res.json()
       setEntregadores(data.entregadores || [])
       setTotais(data.totais)
     } catch (e) {
       console.error('Erro ao buscar ledger:', e)
-      setError(e instanceof Error ? e.message : 'Erro desconhecido')
     } finally {
       setLoading(false)
     }
@@ -106,307 +94,253 @@ export default function LedgerEntregadoresClient() {
 
   const filtered = entregadores
     .filter(e => e.nome.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => {
-      switch (sort) {
-        case "nome": return a.nome.localeCompare(b.nome)
-        case "cash_desc": return b.total_cash_credito - a.total_cash_credito
-        case "digital_desc": return b.total_digital - a.total_digital
-        case "saldo_desc": return b.saldo_cash_liquido - a.saldo_cash_liquido
-        default: return 0
-      }
-    })
 
-  function getTipoBadge(tipo: string) {
-    switch (tipo.toUpperCase()) {
-      case 'DINHEIRO_FISICO': return <Badge className="bg-amber-100 text-amber-800 border-amber-300 gap-1"><Banknote className="size-3" /> Dinheiro</Badge>
-      case 'PIX_CARTAO': return <Badge className="bg-blue-100 text-blue-800 border-blue-300 gap-1"><CreditCard className="size-3" /> Pix/Cartão</Badge>
-      case 'ENTREGA': return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 gap-1"><Wallet className="size-3" /> Entrega</Badge>
-      default: return <Badge variant="outline">{tipo}</Badge>
-    }
-  }
+  const selected = selectedEntregador
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Banknote className="size-6 text-amber-500" />
-            Ledger — Cash vs Digital
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Acompanhamento de entregas em dinheiro vs Pix/cartão por entregador.
-            Entregas em dinheiro são coletadas diretamente pelo entregador — o saldo líquido
-            representa o valor que ele deve repassar ao sistema (total coletado - taxa de entrega).
-          </p>
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin h-8 w-8 border-4 border-[#2563eb] border-t-transparent rounded-full" />
         </div>
-        <button onClick={fetchData} disabled={loading} className="text-xs text-muted-foreground hover:text-foreground underline disabled:opacity-50">
-          {loading ? 'Atualizando...' : 'Atualizar'}
-        </button>
-      </div>
-
-      {/* Summary Cards */}
-      {totais && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="border-amber-200 bg-amber-50/50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-amber-800 flex items-center gap-2">
-                <Banknote className="size-4" />
-                Total Cash Coletado
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-amber-900">{formatCurrencyBRL(totais.total_cash_credito)}</p>
-              <p className="text-xs text-amber-700">{totais.qtd_cash_credito} entregas em dinheiro</p>
-            </CardContent>
-          </Card>
-          <Card className="border-blue-200 bg-blue-50/50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-blue-800 flex items-center gap-2">
-                <CreditCard className="size-4" />
-                Total Digital (Pix/Cartão)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-blue-900">{formatCurrencyBRL(totais.total_digital)}</p>
-              <p className="text-xs text-blue-700">{totais.qtd_digital} entregas Pix/Cartão</p>
-            </CardContent>
-          </Card>
-          <Card className="border-red-200 bg-red-50/50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-red-800 flex items-center gap-2">
-                <TrendingDown className="size-4" />
-                Taxa de Entrega (retida)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-red-900">{formatCurrencyBRL(totais.total_cash_debito)}</p>
-              <p className="text-xs text-red-700">Taxa retida pelo entregador nas entregas cash</p>
-            </CardContent>
-          </Card>
-          <Card className={((totais.total_cash_credito - totais.total_cash_debito) > 0 ? 'border-amber-200 bg-amber-50/50' : 'border-emerald-200 bg-emerald-50/50')}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <DollarSign className="size-4" />
-                Saldo a Repassar
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className={`text-2xl font-bold ${(totais.total_cash_credito - totais.total_cash_debito) > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                {formatCurrencyBRL(totais.total_cash_credito - totais.total_cash_debito)}
-              </p>
-              <p className="text-xs text-muted-foreground">Valor que o entregador deve repassar ao sistema</p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          {filtered.length} de {entregadores.length} entregadores
-        </div>
-        <div className="flex gap-2">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar entregador"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-[220px] pl-8"
-            />
-          </div>
-          <Select value={sort} onValueChange={setSort}>
-            <SelectTrigger className="w-[200px]">
-              <ArrowUpDown className="size-3 mr-1" />
-              <SelectValue placeholder="Ordenar" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="nome">Nome (A-Z)</SelectItem>
-              <SelectItem value="cash_desc">Total Cash (desc)</SelectItem>
-              <SelectItem value="digital_desc">Total Digital (desc)</SelectItem>
-              <SelectItem value="saldo_desc">Saldo Líquido (desc)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Error */}
-      {error && (
-        <Card className="border-red-300 bg-red-50">
-          <CardContent className="flex items-center gap-3 py-4">
-            <AlertCircle className="size-5 text-red-500 shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-red-800">Erro ao carregar dados</p>
-              <p className="text-xs text-red-600">{error}</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Loading */}
-      {loading && !error && (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="size-8 animate-spin text-muted-foreground" />
-        </div>
-      )}
-
-      {/* Table */}
-      {!loading && !error && (
-        <div className="border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Entregador</TableHead>
-                <TableHead className="text-right">Cash Coletado</TableHead>
-                <TableHead className="text-right">Qtd Cash</TableHead>
-                <TableHead className="text-right">Taxa Retida</TableHead>
-                <TableHead className="text-right">Digital</TableHead>
-                <TableHead className="text-right">Qtd Digital</TableHead>
-                <TableHead className="text-right">Saldo a Repassar</TableHead>
-                <TableHead className="text-right">Chave Pix</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
-                    Nenhum entregador encontrado
-                  </TableCell>
-                </TableRow>
-              ) : filtered.map((e) => (
-                <TableRow
-                  key={e.entregador_id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => {
-                    setSelectedEntregador(e)
-                    fetchExtrato(e.entregador_id)
-                    setDialogOpen(true)
-                  }}
-                >
-                  <TableCell className="font-medium">{e.nome}</TableCell>
-                  <TableCell className="text-right font-mono">{formatCurrencyBRL(e.total_cash_credito)}</TableCell>
-                  <TableCell className="text-right">
-                    <Badge variant="secondary" className="bg-amber-100 text-amber-700">{e.qtd_cash_credito}x</Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-red-600">{formatCurrencyBRL(e.total_cash_debito)}</TableCell>
-                  <TableCell className="text-right font-mono">{formatCurrencyBRL(e.total_digital)}</TableCell>
-                  <TableCell className="text-right">
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-700">{e.qtd_digital}x</Badge>
-                  </TableCell>
-                  <TableCell className={`text-right font-mono font-bold ${e.saldo_cash_liquido > 0 ? 'text-amber-600' : e.saldo_cash_liquido < 0 ? 'text-red-600' : ''}`}>
-                    {formatCurrencyBRL(e.saldo_cash_liquido)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {e.chave_pix ? (
-                      <span className="text-xs font-mono text-muted-foreground truncate max-w-[100px] inline-block align-middle">{e.chave_pix}</span>
-                    ) : (
-                      <Badge variant="outline" className="text-red-500 border-red-300 text-[10px]">Sem chave</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <ChevronRight className="size-4 text-muted-foreground" />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-
-      {/* Dialog: Extrato detalhado */}
-      <Dialog open={dialogOpen} onOpenChange={(open) => {
-        setDialogOpen(open)
-        if (!open) setExtrato([])
-      }}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Banknote className="size-5 text-amber-500" />
-              Extrato Ledger — {selectedEntregador?.nome}
-            </DialogTitle>
-          </DialogHeader>
-
-          {loadingExtrato ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="size-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {/* Mini resumo */}
-              {selectedEntregador && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div className="bg-amber-50 p-3 rounded-lg">
-                    <p className="text-[10px] font-bold text-amber-800 uppercase">Cash Coletado</p>
-                    <p className="text-lg font-bold text-amber-900">{formatCurrencyBRL(selectedEntregador.total_cash_credito)}</p>
-                    <p className="text-xs text-amber-700">{selectedEntregador.qtd_cash_credito} entregas</p>
-                  </div>
-                  <div className="bg-red-50 p-3 rounded-lg">
-                    <p className="text-[10px] font-bold text-red-800 uppercase">Taxa Retida</p>
-                    <p className="text-lg font-bold text-red-900">{formatCurrencyBRL(selectedEntregador.total_cash_debito)}</p>
-                    <p className="text-xs text-red-700">Taxa de entrega que o entregador reteve</p>
-                  </div>
-                  <div className="bg-blue-50 p-3 rounded-lg">
-                    <p className="text-[10px] font-bold text-blue-800 uppercase">Digital</p>
-                    <p className="text-lg font-bold text-blue-900">{formatCurrencyBRL(selectedEntregador.total_digital)}</p>
-                    <p className="text-xs text-blue-700">{selectedEntregador.qtd_digital} entregas Pix/Cartão</p>
-                  </div>
-                  <div className={selectedEntregador.saldo_cash_liquido > 0 ? 'bg-amber-100 p-3 rounded-lg' : 'bg-emerald-100 p-3 rounded-lg'}>
-                    <p className="text-[10px] font-bold uppercase">Saldo a Repassar</p>
-                    <p className={`text-lg font-bold ${selectedEntregador.saldo_cash_liquido > 0 ? 'text-amber-900' : 'text-emerald-900'}`}>
-                      {formatCurrencyBRL(selectedEntregador.saldo_cash_liquido)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Valor que o entregador deve ao sistema</p>
-                  </div>
+      ) : !selectedEntregador ? (
+        <>
+          {totais && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-[#e0f2fe] border border-[#bae6fd] p-5 rounded-lg">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-[#64748b]">Total em Dinheiro</span>
+                  <span className="text-[#0369a1] material-symbols-outlined">payments</span>
                 </div>
-              )}
-
-              {/* Tabela de lançamentos */}
-              {extrato.length === 0 ? (
-                <p className="text-center text-muted-foreground py-6">Nenhum lançamento encontrado no ledger.</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Natureza</TableHead>
-                      <TableHead>Descrição</TableHead>
-                      <TableHead>Referência</TableHead>
-                      <TableHead className="text-right">Valor</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {extrato.map((l) => (
-                      <TableRow key={l.id}>
-                        <TableCell className="text-xs font-mono whitespace-nowrap">
-                          {new Date(l.criado_em).toLocaleString('pt-BR')}
-                        </TableCell>
-                        <TableCell>{getTipoBadge(l.tipo)}</TableCell>
-                        <TableCell>
-                          {l.natureza?.toUpperCase() === 'CREDITO' ? (
-                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300">Crédito</Badge>
-                          ) : l.natureza?.toUpperCase() === 'DEBITO' ? (
-                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300">Débito</Badge>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-xs max-w-[200px] truncate">{l.categoria_contabil || '—'}</TableCell>
-                        <TableCell className="text-xs font-mono">{l.referencia_externa ? l.referencia_externa.substring(0, 12) + '...' : '—'}</TableCell>
-                        <TableCell className={`text-right font-mono font-bold ${(l.natureza || '').toUpperCase() === 'CREDITO' ? 'text-emerald-600' : (l.natureza || '').toUpperCase() === 'DEBITO' ? 'text-red-600' : ''}`}>
-                          {formatCurrencyBRL(l.valor)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
+                <div className="text-3xl font-bold text-[#0c4a6e] font-mono">{formatCurrencyBRL(totais.total_cash_credito)}</div>
+                <div className="mt-2 text-xs text-[#0369a1] flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px]">trending_up</span>
+                  {totais.qtd_cash_credito} entregas em dinheiro
+                </div>
+              </div>
+              <div className="bg-[#f0fdf4] border border-[#dcfce7] p-5 rounded-lg">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-[#64748b]">Total Digital/Pix</span>
+                  <span className="text-[#15803d] material-symbols-outlined">account_balance_wallet</span>
+                </div>
+                <div className="text-3xl font-bold text-[#064e3b] font-mono">{formatCurrencyBRL(totais.total_digital)}</div>
+                <div className="mt-2 text-xs text-[#15803d] flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px]">trending_up</span>
+                  {totais.qtd_digital} entregas Pix/Cartão
+                </div>
+              </div>
+              <div className="bg-white border border-[#cbd5e1] p-5 rounded-lg shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-[#2563eb]" />
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-[#64748b]">Saldo Líquido a Repassar</span>
+                  <span className="text-[#2563eb] material-symbols-outlined">account_balance</span>
+                </div>
+                <div className="text-3xl font-bold text-[#2563eb] font-mono">
+                  {formatCurrencyBRL((totais.total_cash_credito || 0) - (totais.total_cash_debito || 0))}
+                </div>
+                <div className="mt-2 text-xs text-[#64748b]">Valor que o entregador deve repassar ao sistema</div>
+              </div>
+              <div className="bg-white border border-[#cbd5e1] p-5 rounded-lg shadow-sm">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-[#64748b]">Total de Transações</span>
+                  <span className="text-[#64748b] material-symbols-outlined">swap_horiz</span>
+                </div>
+                <div className="text-3xl font-bold text-[#0b1c30] font-mono">{totais.qtd_cash_credito + totais.qtd_digital}</div>
+                <div className="mt-2 text-xs text-[#64748b]">
+                  Ticket médio: {formatCurrencyBRL(
+                    (totais.total_cash_credito + totais.total_digital) /
+                    Math.max(1, totais.qtd_cash_credito + totais.qtd_digital)
+                  )}
+                </div>
+              </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+
+          <div className="bg-white border border-[#cbd5e1] rounded-lg shadow-sm overflow-hidden">
+            <div className="p-5 border-b border-[#e2e8f0] flex justify-between items-center bg-white">
+              <h4 className="font-semibold text-[#0b1c30]">Entregadores</h4>
+              <div className="flex gap-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
+                  <Input
+                    placeholder="Buscar entregador..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    className="pl-10 pr-4 py-2 border border-[#cbd5e1] rounded-lg text-sm w-64"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-[#f8fafc] border-b border-[#e2e8f0]">
+                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-[#64748b]">Entregador</th>
+                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] text-right">Cash Coletado</th>
+                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] text-right">Qtd</th>
+                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] text-right">Taxa Retida</th>
+                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] text-right">Digital</th>
+                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] text-right">Saldo a Repassar</th>
+                    <th className="px-6 py-4"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#e2e8f0]">
+                  {filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-12 text-center text-sm text-[#64748b]">
+                        Nenhum entregador encontrado
+                      </td>
+                    </tr>
+                  ) : filtered.map((e) => (
+                    <tr
+                      key={e.entregador_id}
+                      className="hover:bg-[#f8fafc] transition-colors cursor-pointer"
+                      onClick={() => {
+                        setSelectedEntregador(e)
+                        fetchExtrato(e.entregador_id)
+                      }}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-semibold text-[#0b1c30]">{e.nome}</span>
+                          {e.chave_pix && (
+                            <span className="text-xs text-[#64748b] font-mono">{e.chave_pix}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right font-mono text-sm text-[#0b1c30]">{formatCurrencyBRL(e.total_cash_credito)}</td>
+                      <td className="px-6 py-4 text-right">
+                        <Badge className="bg-[#e0f2fe] text-[#0369a1] border-none">{e.qtd_cash_credito}x</Badge>
+                      </td>
+                      <td className="px-6 py-4 text-right font-mono text-sm text-[#b91c1c]">{formatCurrencyBRL(e.total_cash_debito)}</td>
+                      <td className="px-6 py-4 text-right font-mono text-sm text-[#0b1c30]">{formatCurrencyBRL(e.total_digital)}</td>
+                      <td className={`px-6 py-4 text-right font-mono text-sm font-bold ${e.saldo_cash_liquido > 0 ? 'text-[#2563eb]' : 'text-[#059669]'}`}>
+                        {formatCurrencyBRL(e.saldo_cash_liquido)}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <span className="material-symbols-outlined text-[#64748b] text-[20px]">chevron_right</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-6 py-4 border-t border-[#e2e8f0] bg-[#f8fafc] flex justify-between items-center">
+              <span className="text-xs text-[#64748b]">
+                Exibindo {filtered.length} de {entregadores.length} entregadores
+              </span>
+              <div className="flex gap-2">
+                <button className="p-2 border border-[#cbd5e1] rounded hover:bg-white disabled:opacity-50" disabled>
+                  <ChevronLeft className="h-4 w-4 text-[#64748b]" />
+                </button>
+                <button className="px-3 py-1 bg-[#2563eb] text-white rounded text-xs font-medium">1</button>
+                <button className="p-2 border border-[#cbd5e1] rounded hover:bg-white">
+                  <ChevronRight className="h-4 w-4 text-[#64748b]" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="space-y-6">
+          <button
+            onClick={() => { setSelectedEntregador(null); setExtrato([]) }}
+            className="flex items-center gap-2 text-sm text-[#64748b] hover:text-[#2563eb] transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Voltar para lista de entregadores
+          </button>
+
+          <div className="bg-white border border-[#cbd5e1] rounded-lg p-6">
+            <h4 className="text-xl font-bold text-[#0b1c30] mb-1">{selectedEntregador.nome}</h4>
+            <p className="text-sm text-[#64748b] mb-6">Extrato detalhado de lançamentos</p>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-[#e0f2fe] p-4 rounded-lg">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748b]">Cash Coletado</p>
+                <p className="text-xl font-bold text-[#0c4a6e] font-mono mt-1">{formatCurrencyBRL(selectedEntregador.total_cash_credito)}</p>
+                <p className="text-xs text-[#0369a1]">{selectedEntregador.qtd_cash_credito} entregas</p>
+              </div>
+              <div className="bg-[#fef2f2] p-4 rounded-lg">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748b]">Taxa Retida</p>
+                <p className="text-xl font-bold text-[#b91c1c] font-mono mt-1">{formatCurrencyBRL(selectedEntregador.total_cash_debito)}</p>
+                <p className="text-xs text-[#b91c1c]">Taxa de entrega retida</p>
+              </div>
+              <div className="bg-[#f0fdf4] p-4 rounded-lg">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748b]">Digital</p>
+                <p className="text-xl font-bold text-[#064e3b] font-mono mt-1">{formatCurrencyBRL(selectedEntregador.total_digital)}</p>
+                <p className="text-xs text-[#15803d]">{selectedEntregador.qtd_digital} entregas Pix/Cartão</p>
+              </div>
+              <div className="bg-white border border-[#2563eb] p-4 rounded-lg relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-[#2563eb]" />
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748b]">Saldo a Repassar</p>
+                <p className="text-xl font-bold text-[#2563eb] font-mono mt-1">
+                  {formatCurrencyBRL(selectedEntregador.saldo_cash_liquido)}
+                </p>
+                <p className="text-xs text-[#64748b]">Valor que o entregador deve ao sistema</p>
+              </div>
+            </div>
+
+            {loadingExtrato ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin h-6 w-6 border-4 border-[#2563eb] border-t-transparent rounded-full" />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-[#f8fafc] border-b border-[#e2e8f0]">
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#64748b]">Data</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#64748b]">Tipo</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#64748b]">Natureza</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#64748b]">Descrição</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#64748b] text-right">Valor</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#e2e8f0]">
+                    {extrato.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-8 text-center text-sm text-[#64748b]">Nenhum lançamento encontrado.</td>
+                      </tr>
+                    ) : extrato.map((l) => (
+                      <tr key={l.id} className="hover:bg-[#f8fafc] transition-colors">
+                        <td className="px-4 py-3 text-xs font-mono text-[#0b1c30]">
+                          {new Date(l.criado_em).toLocaleString('pt-BR')}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge className={
+                            l.tipo === 'DINHEIRO_FISICO' ? 'bg-[#e0f2fe] text-[#0369a1] border-none' :
+                            l.tipo === 'PIX_CARTAO' ? 'bg-[#f0fdf4] text-[#15803d] border-none' :
+                            'bg-[#f1f5f9] text-[#64748b] border-none'
+                          }>
+                            {l.tipo === 'DINHEIRO_FISICO' ? 'Dinheiro' : l.tipo === 'PIX_CARTAO' ? 'Digital' : l.tipo}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant="outline" className={
+                            l.natureza?.toUpperCase() === 'CREDITO' ? 'text-[#059669] border-[#059669]' :
+                            l.natureza?.toUpperCase() === 'DEBITO' ? 'text-[#b91c1c] border-[#b91c1c]' :
+                            'text-[#64748b]'
+                          }>
+                            {l.natureza || '—'}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-[#0b1c30]">{l.categoria_contabil || '—'}</td>
+                        <td className={`px-4 py-3 text-right font-mono text-sm font-bold ${
+                          l.natureza?.toUpperCase() === 'CREDITO' ? 'text-[#059669]' :
+                          l.natureza?.toUpperCase() === 'DEBITO' ? 'text-[#b91c1c]' : ''
+                        }`}>
+                          {formatCurrencyBRL(l.valor)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

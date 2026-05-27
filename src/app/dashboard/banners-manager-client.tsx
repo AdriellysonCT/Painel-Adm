@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, useCallback } from "react"
 import Image from "next/image"
 import { motion } from "framer-motion"
 import { supabase } from "@/lib/supabaseClient"
@@ -40,8 +40,9 @@ import {
     Upload,
     X,
 } from "lucide-react"
+import BannerCropDialog from "./banner-crop-dialog"
 
-type MediaType = "emoji" | "image"
+type MediaType = "emoji" | "image" | "banner_pronto"
 type TextAnimation = "slide-up" | "fade-scale" | "lift-reveal"
 type MediaAnimation = "float" | "pulse" | "wiggle" | "drift"
 
@@ -192,21 +193,6 @@ function getDestinationLabel(tipoLink: string) {
     }
 }
 
-async function fileToDataUrl(file: File) {
-    return new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => {
-            if (typeof reader.result === "string") {
-                resolve(reader.result)
-                return
-            }
-            reject(new Error("Arquivo inválido"))
-        }
-        reader.onerror = () => reject(new Error("Não foi possível ler a imagem"))
-        reader.readAsDataURL(file)
-    })
-}
-
 function getTextMotion(animation: TextAnimation, intensity: number = 1): any {
     const bezel = [0.22, 1, 0.36, 1] as any
     const durationMultiplier = 1 / Math.max(0.2, intensity)
@@ -309,6 +295,14 @@ function BannerShowcase({
     const mediaOffsetX = banner.media_offset_x ?? 0
     const mediaOffsetY = banner.media_offset_y ?? 0
     const imageSize = compact ? 150 : 178
+
+    if (banner.tipo_midia === "banner_pronto" && banner.imagem_url) {
+        return (
+            <div className={`relative overflow-hidden rounded-[32px] shadow-2xl ${compact ? "min-h-[248px]" : "min-h-[280px]"}`}>
+                <Image src={banner.imagem_url} alt="Banner promocional" fill className="object-cover" sizes={compact ? "400px" : "600px"} unoptimized />
+            </div>
+        )
+    }
 
     return (
         <div
@@ -452,6 +446,8 @@ export default function BannersManagerClient() {
     const [searchTerm, setSearchTerm] = useState("")
     const [itemSearchTerm, setItemSearchTerm] = useState("")
     const [novoBanner, setNovoBanner] = useState<BannerDraft>(INITIAL_BANNER_STATE)
+    const [cropFile, setCropFile] = useState<File | null>(null)
+    const [isUploadingStorage, setIsUploadingStorage] = useState(false)
 
     useEffect(() => {
         fetchBanners()
@@ -596,10 +592,11 @@ export default function BannersManagerClient() {
                 horario_inicio: payload.horario_inicio || null,
                 horario_fim: payload.horario_fim || null,
             }
+            const hasMedia = payload.tipo_midia === "image" || payload.tipo_midia === "banner_pronto"
             const mediaPayload = {
                 ...basePayload,
                 tipo_midia: payload.tipo_midia,
-                imagem_url: payload.tipo_midia === "image" ? payload.imagem_url || null : null,
+                imagem_url: hasMedia ? payload.imagem_url || null : null,
                 animacao_texto: payload.animacao_texto,
                 animacao_midia: payload.animacao_midia,
             }
@@ -696,22 +693,52 @@ export default function BannersManagerClient() {
         const file = event.target.files?.[0]
         if (!file) return
 
-        if (file.size > 1024 * 1024 * 1.5) {
-            alert("Escolha uma imagem com até 1,5 MB para não pesar o banner.")
+        if (file.size > 2 * 1024 * 1024) {
+            alert("Escolha uma imagem com até 2 MB.")
             event.target.value = ""
             return
         }
 
-        try {
-            const dataUrl = await fileToDataUrl(file)
-            setNovoBanner((prev) => ({ ...prev, tipo_midia: "image", imagem_url: dataUrl, media_scale: 1, media_offset_x: 0, media_offset_y: 0 }))
-        } catch (error) {
-            const message = error instanceof Error ? error.message : "Erro ao carregar imagem"
-            alert(message)
-        } finally {
-            event.target.value = ""
-        }
+        setCropFile(file)
+        event.target.value = ""
     }
+
+    const handleCropConfirm = useCallback(async (croppedBlob: Blob) => {
+        if (!cropFile) return
+        setIsUploadingStorage(true)
+        try {
+            const formData = new FormData()
+            const ext = cropFile.name.split(".").pop() || "webp"
+            const filename = `banner-${Date.now()}.${ext}`
+            formData.append("file", croppedBlob, filename)
+
+            const res = await fetch("/api/banners/upload", {
+                method: "POST",
+                body: formData,
+            })
+
+            if (!res.ok) {
+                const err = await res.json()
+                throw new Error(err.error || "Falha ao enviar imagem")
+            }
+
+            const { url } = await res.json()
+            setNovoBanner((prev) => ({
+                ...prev,
+                tipo_midia: "image",
+                imagem_url: url,
+                media_scale: 1,
+                media_offset_x: 0,
+                media_offset_y: 0,
+            }))
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Erro ao enviar imagem"
+            alert("Erro ao enviar imagem: " + message)
+        } finally {
+            setIsUploadingStorage(false)
+            setCropFile(null)
+        }
+    }, [cropFile])
 
     const filteredResults = useMemo(() => {
         const normalizedSearch = searchTerm.toLowerCase()
@@ -748,7 +775,7 @@ export default function BannersManagerClient() {
             <CardHeader className="px-0 pt-0">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div className="space-y-2">
-                        <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-orange-700">
+                        <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-blue-700">
                             <Sparkles className="h-3.5 w-3.5" /> Estúdio de banners
                         </div>
                         <div>
@@ -763,7 +790,7 @@ export default function BannersManagerClient() {
                         <Button variant="outline" size="sm" onClick={fetchBanners} disabled={loading}>
                             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Sincronizar
                         </Button>
-                        <Button className="bg-orange-600 text-white shadow-lg hover:bg-orange-700" onClick={() => handleOpenDialog()}>
+                        <Button className="bg-[#2563eb] text-white shadow-lg hover:bg-[#1d4ed8]" onClick={() => handleOpenDialog()}>
                             <Plus className="mr-2 h-4 w-4" /> Novo banner
                         </Button>
                     </div>
@@ -823,30 +850,40 @@ export default function BannersManagerClient() {
                         <form onSubmit={handleSaveBanner} className="space-y-8">
                             <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
                                 <div className="space-y-6">
+                                    {novoBanner.tipo_midia !== "banner_pronto" && (
+                                        <>
+                                            <div className="grid gap-4 md:grid-cols-2">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="titulo-banner">Título principal</Label>
+                                                    <Input id="titulo-banner" placeholder="Ex: Pizza em Dobro!" value={novoBanner.titulo} onChange={(event) => setNovoBanner((prev) => ({ ...prev, titulo: event.target.value }))} required />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="cta-banner">Texto do botão</Label>
+                                                    <Input id="cta-banner" placeholder="Ex: Pedir agora" value={novoBanner.botao_texto} onChange={(event) => setNovoBanner((prev) => ({ ...prev, botao_texto: event.target.value }))} required />
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label htmlFor="subtitulo-banner">{"Subt\u00edtulo"}</Label>
+                                                <Input id="subtitulo-banner" placeholder="Ex: Compre 1 e leve outra pequena" value={novoBanner.subtitulo} onChange={(event) => setNovoBanner((prev) => ({ ...prev, subtitulo: event.target.value }))} />
+                                            </div>
+
+                                            <div className="grid gap-4">
+                                                <div className="space-y-2">
+                                                    <Label>{"Visual do banner"}</Label>
+                                                    <Select value={novoBanner.cor_fundo} onValueChange={(value) => setNovoBanner((prev) => ({ ...prev, cor_fundo: value }))}>
+                                                        <SelectTrigger><SelectValue placeholder={"Selecione o visual do card"} /></SelectTrigger>
+                                                        <SelectContent>{BANNER_THEMES.map((theme) => <SelectItem key={theme.value} value={theme.value}>{theme.label}</SelectItem>)}</SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+
                                     <div className="grid gap-4 md:grid-cols-2">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="titulo-banner">Título principal</Label>
-                                            <Input id="titulo-banner" placeholder="Ex: Pizza em Dobro!" value={novoBanner.titulo} onChange={(event) => setNovoBanner((prev) => ({ ...prev, titulo: event.target.value }))} required />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="cta-banner">Texto do botão</Label>
-                                            <Input id="cta-banner" placeholder="Ex: Pedir agora" value={novoBanner.botao_texto} onChange={(event) => setNovoBanner((prev) => ({ ...prev, botao_texto: event.target.value }))} required />
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="subtitulo-banner">{"Subt\u00edtulo"}</Label>
-                                        <Input id="subtitulo-banner" placeholder="Ex: Compre 1 e leve outra pequena" value={novoBanner.subtitulo} onChange={(event) => setNovoBanner((prev) => ({ ...prev, subtitulo: event.target.value }))} />
-                                    </div>
-
-                                    <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
-                                        <div className="space-y-2">
-                                            <Label>{"Visual do banner"}</Label>
-                                            <Select value={novoBanner.cor_fundo} onValueChange={(value) => setNovoBanner((prev) => ({ ...prev, cor_fundo: value }))}>
-                                                <SelectTrigger><SelectValue placeholder={"Selecione o visual do card"} /></SelectTrigger>
-                                                <SelectContent>{BANNER_THEMES.map((theme) => <SelectItem key={theme.value} value={theme.value}>{theme.label}</SelectItem>)}</SelectContent>
-                                            </Select>
-                                        </div>
+                                        {novoBanner.tipo_midia !== "banner_pronto" ? (
+                                            <div />
+                                        ) : null}
                                         <div className="space-y-2">
                                             <Label htmlFor="ordem-banner">{"Ordem"}</Label>
                                             <Input id="ordem-banner" type="number" min="0" value={novoBanner.ordem} onChange={(event) => setNovoBanner((prev) => ({ ...prev, ordem: Number(event.target.value || 0) }))} />
@@ -856,17 +893,21 @@ export default function BannersManagerClient() {
                                     <div className="space-y-4 rounded-[28px] border border-border/70 bg-muted/20 p-4">
                                         <div className="flex items-center justify-between gap-2">
                                             <Label className="text-sm font-bold">{"M\u00eddia principal do banner"}</Label>
-                                            <Badge variant="outline">{"Escolha emoji ou imagem"}</Badge>
+                                            <Badge variant="outline">{novoBanner.tipo_midia === "banner_pronto" ? "Imagem completa, sem texto" : "Escolha emoji ou imagem"}</Badge>
                                         </div>
 
-                                        <div className="grid gap-3 md:grid-cols-2">
-                                            <button type="button" onClick={() => setNovoBanner((prev) => ({ ...prev, tipo_midia: "emoji" }))} className={`rounded-2xl border px-4 py-3 text-left transition-colors ${novoBanner.tipo_midia === "emoji" ? "border-orange-500 bg-orange-50" : "border-border bg-background hover:bg-muted/40"}`}>
+                                        <div className="grid gap-3 md:grid-cols-3">
+                                            <button type="button" onClick={() => setNovoBanner((prev) => ({ ...prev, tipo_midia: "emoji" }))} className={`rounded-2xl border px-4 py-3 text-left transition-colors ${novoBanner.tipo_midia === "emoji" ? "border-[#2563eb] bg-blue-50" : "border-border bg-background hover:bg-muted/40"}`}>
                                                 <div className="font-semibold">Usar emoji</div>
                                                 <p className="text-sm text-muted-foreground">Mantém o ícone leve e rápido.</p>
                                             </button>
-                                            <button type="button" onClick={() => setNovoBanner((prev) => ({ ...prev, tipo_midia: "image" }))} className={`rounded-2xl border px-4 py-3 text-left transition-colors ${novoBanner.tipo_midia === "image" ? "border-orange-500 bg-orange-50" : "border-border bg-background hover:bg-muted/40"}`}>
+                                            <button type="button" onClick={() => setNovoBanner((prev) => ({ ...prev, tipo_midia: "image" }))} className={`rounded-2xl border px-4 py-3 text-left transition-colors ${novoBanner.tipo_midia === "image" ? "border-[#2563eb] bg-blue-50" : "border-border bg-background hover:bg-muted/40"}`}>
                                                 <div className="font-semibold">Usar imagem</div>
                                                 <p className="text-sm text-muted-foreground">Faz upload local e usa arte própria.</p>
+                                            </button>
+                                            <button type="button" onClick={() => setNovoBanner((prev) => ({ ...prev, tipo_midia: "banner_pronto" }))} className={`rounded-2xl border px-4 py-3 text-left transition-colors ${novoBanner.tipo_midia === "banner_pronto" ? "border-[#2563eb] bg-blue-50" : "border-border bg-background hover:bg-muted/40"}`}>
+                                                <div className="font-semibold">Usar banner pronto</div>
+                                                <p className="text-sm text-muted-foreground">Imagem promocional completa (título, texto já inclusos).</p>
                                             </button>
                                         </div>
 
@@ -875,7 +916,7 @@ export default function BannersManagerClient() {
                                                 <Label>{"\u00cdcone em emoji"}</Label>
                                                 <div className="flex flex-wrap gap-2 rounded-[24px] border bg-background p-3">
                                                     {EMOJI_OPTIONS.map((emoji) => (
-                                                        <button key={emoji} type="button" onClick={() => setNovoBanner((prev) => ({ ...prev, emoji }))} className={`flex h-11 w-11 items-center justify-center rounded-2xl text-xl transition-all hover:scale-110 active:scale-95 ${novoBanner.emoji === emoji ? "bg-orange-600 text-white shadow-lg" : "bg-white hover:bg-orange-50"}`}>{emoji}</button>
+                                                        <button key={emoji} type="button" onClick={() => setNovoBanner((prev) => ({ ...prev, emoji }))} className={`flex h-11 w-11 items-center justify-center rounded-2xl text-xl transition-all hover:scale-110 active:scale-95 ${novoBanner.emoji === emoji ? "bg-[#2563eb] text-white shadow-lg" : "bg-white hover:bg-blue-50"}`}>{emoji}</button>
                                                     ))}
                                                     <div className="ml-auto flex items-center gap-2">
                                                         <span className="text-[10px] font-bold uppercase text-muted-foreground">{"Outro"}</span>
@@ -883,11 +924,24 @@ export default function BannersManagerClient() {
                                                     </div>
                                                 </div>
                                             </div>
+                                        ) : novoBanner.tipo_midia === "banner_pronto" ? (
+                                            <div className="space-y-3">
+                                                <Label>{"Link da imagem promocional"}</Label>
+                                                <div className="flex flex-col gap-3 rounded-[24px] border bg-background p-4">
+                                                    <Input placeholder="https://exemplo.com/banner-pronto.jpg" value={novoBanner.imagem_url} onChange={(event) => setNovoBanner((prev) => ({ ...prev, imagem_url: event.target.value }))} />
+                                                    <p className="text-xs text-muted-foreground">Cole o link de uma imagem hospedada (Imgur, Google Drive, etc). A imagem será exibida por completo na vitrine — o texto já vem incluso na arte.</p>
+                                                    {novoBanner.imagem_url && (
+                                                        <div className="relative h-48 w-full overflow-hidden rounded-2xl bg-muted shadow-sm">
+                                                            <Image src={novoBanner.imagem_url} alt="Banner pronto" fill sizes="600px" className="object-contain" unoptimized />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
                                         ) : (
                                             <div className="space-y-3">
                                                 <Label>{"Imagem local"}</Label>
                                                 <div className="flex flex-col gap-3 rounded-[24px] border bg-background p-4">
-                                                    <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-orange-300 bg-orange-50 px-4 py-5 text-sm font-semibold text-orange-700 transition-colors hover:bg-orange-100">
+                                                    <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-blue-300 bg-blue-50 px-4 py-5 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100">
                                                         <Upload className="h-4 w-4" />
                                                         {"Escolher imagem do computador"}
                                                         <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={handleImageUpload} />
@@ -907,54 +961,58 @@ export default function BannersManagerClient() {
                                         )}
                                     </div>
 
-                                    <div className="grid gap-4 md:grid-cols-2">
-                                        <div className="space-y-2 rounded-[24px] border border-border/70 bg-muted/20 p-4">
-                                            <Label>Animação do texto</Label>
-                                            <Select value={novoBanner.animacao_texto} onValueChange={(value) => setNovoBanner((prev) => ({ ...prev, animacao_texto: value as TextAnimation }))}>
-                                                <SelectTrigger><SelectValue placeholder="Escolha a animação" /></SelectTrigger>
-                                                <SelectContent>{TEXT_ANIMATIONS.map((animation) => <SelectItem key={animation.value} value={animation.value}>{animation.label}</SelectItem>)}</SelectContent>
-                                            </Select>
-                                            <p className="text-xs text-muted-foreground">{TEXT_ANIMATIONS.find((item) => item.value === novoBanner.animacao_texto)?.description}</p>
-                                        </div>
-                                        <div className="space-y-2 rounded-[24px] border border-border/70 bg-muted/20 p-4">
-                                            <Label>Animação da mídia</Label>
-                                            <Select value={novoBanner.animacao_midia} onValueChange={(value) => setNovoBanner((prev) => ({ ...prev, animacao_midia: value as MediaAnimation }))}>
-                                                <SelectTrigger><SelectValue placeholder="Escolha a animação" /></SelectTrigger>
-                                                <SelectContent>{MEDIA_ANIMATIONS.map((animation) => <SelectItem key={animation.value} value={animation.value}>{animation.label}</SelectItem>)}</SelectContent>
-                                            </Select>
-                                            <p className="text-xs text-muted-foreground">{MEDIA_ANIMATIONS.find((item) => item.value === novoBanner.animacao_midia)?.description}</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-4 rounded-[24px] border border-orange-200 bg-orange-50/40 p-5">
-                                        <div className="flex items-center justify-between gap-3">
-                                            <div className="space-y-1">
-                                                <Label className="flex items-center gap-2 text-sm font-bold text-orange-900">
-                                                    <Sparkles className="h-4 w-4" /> Intensidade da animação
-                                                </Label>
-                                                <p className="text-xs text-orange-800/70">Aumente para movimentos mais rápidos e amplos.</p>
+                                    {novoBanner.tipo_midia !== "banner_pronto" && (
+                                        <>
+                                            <div className="grid gap-4 md:grid-cols-2">
+                                                <div className="space-y-2 rounded-[24px] border border-border/70 bg-muted/20 p-4">
+                                                    <Label>Animação do texto</Label>
+                                                    <Select value={novoBanner.animacao_texto} onValueChange={(value) => setNovoBanner((prev) => ({ ...prev, animacao_texto: value as TextAnimation }))}>
+                                                        <SelectTrigger><SelectValue placeholder="Escolha a animação" /></SelectTrigger>
+                                                        <SelectContent>{TEXT_ANIMATIONS.map((animation) => <SelectItem key={animation.value} value={animation.value}>{animation.label}</SelectItem>)}</SelectContent>
+                                                    </Select>
+                                                    <p className="text-xs text-muted-foreground">{TEXT_ANIMATIONS.find((item) => item.value === novoBanner.animacao_texto)?.description}</p>
+                                                </div>
+                                                <div className="space-y-2 rounded-[24px] border border-border/70 bg-muted/20 p-4">
+                                                    <Label>Animação da mídia</Label>
+                                                    <Select value={novoBanner.animacao_midia} onValueChange={(value) => setNovoBanner((prev) => ({ ...prev, animacao_midia: value as MediaAnimation }))}>
+                                                        <SelectTrigger><SelectValue placeholder="Escolha a animação" /></SelectTrigger>
+                                                        <SelectContent>{MEDIA_ANIMATIONS.map((animation) => <SelectItem key={animation.value} value={animation.value}>{animation.label}</SelectItem>)}</SelectContent>
+                                                    </Select>
+                                                    <p className="text-xs text-muted-foreground">{MEDIA_ANIMATIONS.find((item) => item.value === novoBanner.animacao_midia)?.description}</p>
+                                                </div>
                                             </div>
-                                            <Badge variant="outline" className="border-orange-200 bg-white text-orange-700">
-                                                {novoBanner.intensidade_animacao.toFixed(1)}x
-                                            </Badge>
-                                        </div>
-                                        <div className="flex items-center gap-4">
-                                            <span className="text-[10px] font-bold text-orange-400">SOFT</span>
-                                            <input
-                                                type="range"
-                                                min="0.2"
-                                                max="4"
-                                                step="0.1"
-                                                value={novoBanner.intensidade_animacao}
-                                                onChange={(event) => setNovoBanner((prev) => ({ ...prev, intensidade_animacao: Number(event.target.value) }))}
-                                                className="h-2 w-full appearance-none rounded-lg bg-orange-200 accent-orange-600"
-                                            />
-                                            <span className="text-[10px] font-bold text-orange-700">EXTREME</span>
-                                        </div>
-                                    </div>
+
+                                            <div className="space-y-4 rounded-[24px] border border-blue-200 bg-blue-50/40 p-5">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div className="space-y-1">
+                                                        <Label className="flex items-center gap-2 text-sm font-bold text-[#1e40af]">
+                                                            <Sparkles className="h-4 w-4" /> Intensidade da animação
+                                                        </Label>
+                                                        <p className="text-xs text-[#1e40af]/70">Aumente para movimentos mais rápidos e amplos.</p>
+                                                    </div>
+                                                    <Badge variant="outline" className="border-blue-200 bg-white text-blue-700">
+                                                        {novoBanner.intensidade_animacao.toFixed(1)}x
+                                                    </Badge>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <span className="text-[10px] font-bold text-blue-400">SOFT</span>
+                                                    <input
+                                                        type="range"
+                                                        min="0.2"
+                                                        max="4"
+                                                        step="0.1"
+                                                        value={novoBanner.intensidade_animacao}
+                                                        onChange={(event) => setNovoBanner((prev) => ({ ...prev, intensidade_animacao: Number(event.target.value) }))}
+                                                        className="h-2 w-full appearance-none rounded-lg bg-blue-200 accent-[#2563eb]"
+                                                    />
+                                                    <span className="text-[10px] font-bold text-blue-700">EXTREME</span>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
 
                                     <div className="space-y-4 border-t pt-6">
-                                        <Label className="flex items-center gap-2 text-sm font-bold"><Layout className="h-4 w-4 text-orange-600" />Ação ao clicar</Label>
+                                        <Label className="flex items-center gap-2 text-sm font-bold"><Layout className="h-4 w-4 text-[#2563eb]" />Ação ao clicar</Label>
                                         <div className="space-y-3">
                                             <Select value={novoBanner.tipo_link} onValueChange={(value) => { setNovoBanner((prev) => ({ ...prev, tipo_link: value, link_id: "", item_id: null })); setSearchTerm(""); setItemSearchTerm("") }}>
                                                 <SelectTrigger><SelectValue placeholder={"Escolha o destino"} /></SelectTrigger>
@@ -975,7 +1033,7 @@ export default function BannersManagerClient() {
 
                                                     <div className="grid max-h-44 grid-cols-1 gap-1 overflow-y-auto rounded-2xl border bg-background p-1">
                                                         {filteredResults.length > 0 ? filteredResults.map((entity) => (
-                                                            <button key={entity.id} type="button" onClick={() => { setNovoBanner((prev) => ({ ...prev, link_id: entity.id })); setSearchTerm(entity.nome) }} className={`flex items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-colors ${novoBanner.link_id === entity.id ? "bg-orange-100 font-bold text-orange-700" : "hover:bg-muted"}`}>
+                                                            <button key={entity.id} type="button" onClick={() => { setNovoBanner((prev) => ({ ...prev, link_id: entity.id })); setSearchTerm(entity.nome) }} className={`flex items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-colors ${novoBanner.link_id === entity.id ? "bg-blue-100 font-bold text-[#2563eb]" : "hover:bg-muted"}`}>
                                                                 <span>{entity.nome}</span>
                                                                 {novoBanner.link_id === entity.id && <Check className="h-4 w-4" />}
                                                             </button>
@@ -985,8 +1043,8 @@ export default function BannersManagerClient() {
                                             )}
 
                                             {novoBanner.tipo_link === "restaurant" && novoBanner.link_id && (
-                                                <div className="space-y-2 rounded-[24px] border border-orange-200 bg-orange-50/60 p-4">
-                                                    <Label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-orange-700"><ShoppingBag className="h-3.5 w-3.5" />{"Direto para um item do restaurante"}</Label>
+                                                <div className="space-y-2 rounded-[24px] border border-blue-200 bg-blue-50/60 p-4">
+                                                    <Label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#2563eb]"><ShoppingBag className="h-3.5 w-3.5" />{"Direto para um item do restaurante"}</Label>
                                                     <div className="relative">
                                                         <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                                                         <Input placeholder={"Buscar produto ou combo"} className="pl-9" value={itemSearchTerm} onChange={(event) => setItemSearchTerm(event.target.value)} />
@@ -994,7 +1052,7 @@ export default function BannersManagerClient() {
                                                     </div>
                                                     <div className="grid max-h-36 grid-cols-1 gap-1 overflow-y-auto rounded-2xl border bg-white p-1">
                                                         {filteredItems.length > 0 ? filteredItems.map((item) => (
-                                                            <button key={item.id} type="button" onClick={() => { setNovoBanner((prev) => ({ ...prev, item_id: item.id })); setItemSearchTerm(item.nome) }} className={`flex items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-colors ${novoBanner.item_id === item.id ? "bg-orange-600 font-bold text-white" : "hover:bg-orange-50"}`}>
+                                                            <button key={item.id} type="button" onClick={() => { setNovoBanner((prev) => ({ ...prev, item_id: item.id })); setItemSearchTerm(item.nome) }} className={`flex items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-colors ${novoBanner.item_id === item.id ? "bg-[#2563eb] font-bold text-white" : "hover:bg-blue-50"}`}>
                                                                 <span>{item.nome}</span>
                                                                 {novoBanner.item_id === item.id && <Check className="h-4 w-4" />}
                                                             </button>
@@ -1006,7 +1064,7 @@ export default function BannersManagerClient() {
                                     </div>
 
                                     <div className="space-y-4 border-t pt-6">
-                                        <Label className="flex items-center gap-2 text-sm font-bold"><Clock className="h-4 w-4 text-orange-600" />{"Regras de tempo"}</Label>
+                                        <Label className="flex items-center gap-2 text-sm font-bold"><Clock className="h-4 w-4 text-[#2563eb]" />{"Regras de tempo"}</Label>
                                         <div className="grid gap-4 md:grid-cols-2">
                                             <div className="space-y-2">
                                                 <Label htmlFor="horario-inicio" className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{"Mostrar \u00e0s"}</Label>
@@ -1025,6 +1083,7 @@ export default function BannersManagerClient() {
                                         <div className="mb-3 flex items-center justify-between gap-3">
                                             <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">{"Preview ao vivo"}</p>
                                             {novoBanner.tipo_midia === "image" && <Badge variant="outline">{"Imagem livre, sem c\u00edrculo"}</Badge>}
+                                            {novoBanner.tipo_midia === "banner_pronto" && <Badge variant="outline">{"Banner promocional completo"}</Badge>}
                                         </div>
                                         <BannerShowcase
                                             banner={{ ...normalizeBannerDraft(novoBanner), titulo: novoBanner.titulo || "Pizza em dobro!", subtitulo: novoBanner.subtitulo || "Compre 1 e leve outra pequena com sensação de campanha premium.", botao_texto: novoBanner.botao_texto || "Pedir agora", ativo: novoBanner.ativo, eyebrow: destinationSummary }}
@@ -1034,16 +1093,16 @@ export default function BannersManagerClient() {
                                         />
 
                                         {novoBanner.tipo_midia === "image" && novoBanner.imagem_url && (
-                                            <div className="mt-4 space-y-4 rounded-[24px] border border-orange-200 bg-orange-50/70 p-4">
+                                            <div className="mt-4 space-y-4 rounded-[24px] border border-blue-200 bg-blue-50/70 p-4">
                                                 <div className="flex items-center justify-between gap-3">
                                                     <div>
-                                                        <p className="text-sm font-bold text-orange-900">{"Editor r\u00e1pido da arte"}</p>
-                                                        <p className="text-xs text-orange-800/80">{"Arraste a imagem no preview e ajuste o tamanho aqui at\u00e9 ficar do jeito certo."}</p>
+                                                        <p className="text-sm font-bold text-[#1e40af]">{"Editor r\u00e1pido da arte"}</p>
+                                                        <p className="text-xs text-[#1e40af]/80">{"Arraste a imagem no preview e ajuste o tamanho aqui at\u00e9 ficar do jeito certo."}</p>
                                                     </div>
                                                     <Button
                                                         type="button"
                                                         variant="outline"
-                                                        className="rounded-2xl border-orange-200 bg-white/80 text-orange-700 hover:bg-white"
+                                                        className="rounded-2xl border-blue-200 bg-white/80 text-[#2563eb] hover:bg-white"
                                                         onClick={() => setNovoBanner((prev) => ({ ...prev, media_scale: 1, media_offset_x: 0, media_offset_y: 0 }))}
                                                     >
                                                         {"Resetar arte"}
@@ -1051,7 +1110,7 @@ export default function BannersManagerClient() {
                                                 </div>
 
                                                 <div className="space-y-2">
-                                                    <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.16em] text-orange-800">
+                                                    <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.16em] text-[#1e40af]">
                                                         <span>{"Escala da imagem"}</span>
                                                         <span>{novoBanner.media_scale.toFixed(2)}x</span>
                                                     </div>
@@ -1062,21 +1121,21 @@ export default function BannersManagerClient() {
                                                         step="0.05"
                                                         value={novoBanner.media_scale}
                                                         onChange={(event) => setNovoBanner((prev) => ({ ...prev, media_scale: Number(event.target.value) }))}
-                                                        className="w-full accent-orange-600"
+                                                        className="w-full accent-[#2563eb]"
                                                     />
                                                 </div>
 
                                                 <div className="grid gap-3 sm:grid-cols-3">
-                                                    <div className="rounded-2xl bg-white/90 px-4 py-3 text-sm text-orange-900">
-                                                        <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-orange-700/80">Posição X</div>
+                                                    <div className="rounded-2xl bg-white/90 px-4 py-3 text-sm text-[#1e40af]">
+                                                        <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#2563eb]/80">Posição X</div>
                                                         <div className="mt-1 font-semibold">{Math.round(novoBanner.media_offset_x)} px</div>
                                                     </div>
-                                                    <div className="rounded-2xl bg-white/90 px-4 py-3 text-sm text-orange-900">
-                                                        <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-orange-700/80">Posição Y</div>
+                                                    <div className="rounded-2xl bg-white/90 px-4 py-3 text-sm text-[#1e40af]">
+                                                        <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#2563eb]/80">Posição Y</div>
                                                         <div className="mt-1 font-semibold">{Math.round(novoBanner.media_offset_y)} px</div>
                                                     </div>
-                                                    <div className="rounded-2xl bg-white/90 px-4 py-3 text-sm text-orange-900">
-                                                        <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-orange-700/80">Animação</div>
+                                                    <div className="rounded-2xl bg-white/90 px-4 py-3 text-sm text-[#1e40af]">
+                                                        <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#2563eb]/80">Animação</div>
                                                         <div className="mt-1 font-semibold">{MEDIA_ANIMATIONS.find((item) => item.value === novoBanner.animacao_midia)?.label}</div>
                                                     </div>
                                                 </div>
@@ -1088,10 +1147,10 @@ export default function BannersManagerClient() {
                                         <CardContent className="space-y-3 p-5 text-sm">
                                             <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">{"Resumo do banner"}</p>
                                             <div className="flex flex-wrap gap-2">
-                                                <Badge variant="outline">{"Visual: "}{resolveTheme(novoBanner.cor_fundo).label}</Badge>
-                                                <Badge variant="outline">{"M\u00eddia: "}{novoBanner.tipo_midia === "image" ? "Imagem" : "Emoji"}</Badge>
-                                                <Badge variant="outline">{"Texto: "}{novoBanner.animacao_texto}</Badge>
-                                                <Badge variant="outline">{"M\u00eddia: "}{novoBanner.animacao_midia}</Badge>
+                                                <Badge variant="outline">{"Visual: "}{novoBanner.tipo_midia !== "banner_pronto" ? resolveTheme(novoBanner.cor_fundo).label : "Imagem pronta"}</Badge>
+                                                <Badge variant="outline">{"M\u00eddia: "}{novoBanner.tipo_midia === "image" ? "Imagem" : novoBanner.tipo_midia === "banner_pronto" ? "Banner pronto" : "Emoji"}</Badge>
+                                                {novoBanner.tipo_midia !== "banner_pronto" && <Badge variant="outline">{"Texto: "}{novoBanner.animacao_texto}</Badge>}
+                                                {novoBanner.tipo_midia !== "banner_pronto" && <Badge variant="outline">{"M\u00eddia: "}{novoBanner.animacao_midia}</Badge>}
                                                 {novoBanner.tipo_midia === "image" && <Badge variant="outline">{"Escala: "}{novoBanner.media_scale.toFixed(2)}x</Badge>}
                                                 <Badge variant="outline">{"Ordem: "}{novoBanner.ordem}</Badge>
                                             </div>
@@ -1102,7 +1161,7 @@ export default function BannersManagerClient() {
                             </div>
 
                             <DialogFooter className="pt-2">
-                                <Button type="submit" disabled={isSubmitting || ((novoBanner.tipo_link === "restaurant" || novoBanner.tipo_link === "category") && !novoBanner.link_id) || (novoBanner.tipo_midia === "image" && !novoBanner.imagem_url)} className="h-12 w-full rounded-2xl bg-orange-600 text-base font-bold text-white shadow-lg hover:bg-orange-700">
+                                                <Button type="submit" disabled={isSubmitting || ((novoBanner.tipo_link === "restaurant" || novoBanner.tipo_link === "category") && !novoBanner.link_id) || ((novoBanner.tipo_midia === "image" || novoBanner.tipo_midia === "banner_pronto") && !novoBanner.imagem_url)} className="h-12 w-full rounded-2xl bg-[#2563eb] text-base font-bold text-white shadow-lg hover:bg-[#1d4ed8]">
                                     {isSubmitting ? "Salvando visual..." : editingId ? "Salvar alterações" : "Criar banner"}
                                 </Button>
                             </DialogFooter>
@@ -1110,12 +1169,28 @@ export default function BannersManagerClient() {
                     </DialogContent>
                 </Dialog>
 
+                <BannerCropDialog
+                    file={cropFile!}
+                    open={!!cropFile && !isUploadingStorage}
+                    onConfirm={handleCropConfirm}
+                    onCancel={() => setCropFile(null)}
+                />
+
+                {isUploadingStorage && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                        <div className="rounded-2xl bg-white p-6 text-center shadow-xl">
+                            <div className="animate-spin h-8 w-8 border-4 border-[#2563eb] border-t-transparent rounded-full mx-auto mb-3" />
+                            <p className="text-sm font-semibold">Enviando banner...</p>
+                        </div>
+                    </div>
+                )}
+
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
                     {loading ? (
-                        <div className="col-span-full flex flex-col items-center gap-4 py-28 text-center"><RefreshCw className="h-10 w-10 animate-spin text-orange-500" /><p className="text-lg font-bold italic">Carregando vitrine...</p></div>
+                        <div className="col-span-full flex flex-col items-center gap-4 py-28 text-center"><RefreshCw className="h-10 w-10 animate-spin text-[#2563eb]" /><p className="text-lg font-bold italic">Carregando vitrine...</p></div>
                     ) : banners.length === 0 ? (
-                        <div className="col-span-full flex flex-col items-center justify-center gap-4 rounded-[40px] border-2 border-dashed border-muted py-28 text-center">
-                            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted"><Plus className="h-10 w-10 text-muted-foreground" /></div>
+                        <div className="col-span-full flex flex-col items-center justify-center gap-4 rounded-[40px] border-2 border-dashed border-[#cbd5e1] py-28 text-center">
+                            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-blue-50"><Plus className="h-10 w-10 text-[#2563eb]" /></div>
                             <div><p className="text-xl font-bold text-muted-foreground">{"Sua vitrine ainda est\u00e1 vazia"}</p><p className="text-sm text-muted-foreground/70">{"Crie o primeiro banner com m\u00eddia customizada e anima\u00e7\u00f5es."}</p></div>
                             <Button variant="outline" className="rounded-full px-8" onClick={() => handleOpenDialog()}>{"Come\u00e7ar agora"}</Button>
                         </div>
@@ -1154,17 +1229,17 @@ export default function BannersManagerClient() {
                                                     <Badge className={banner.ativo ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 text-zinc-600"}>{banner.ativo ? "No ar" : "Pausado"}</Badge>
                                                     <Badge variant="outline">Ordem {banner.ordem}</Badge>
                                                     <Badge variant="outline">{getDestinationLabel(banner.tipo_link)}</Badge>
-                                                    <Badge variant="outline">{hydratedBanner.tipo_midia === "image" ? "Imagem" : "Emoji"}</Badge>
+                                                    <Badge variant="outline">{hydratedBanner.tipo_midia === "image" ? "Imagem" : hydratedBanner.tipo_midia === "banner_pronto" ? "Banner pronto" : "Emoji"}</Badge>
                                                     {banner.item_id && <Badge variant="outline">Direto ao item</Badge>}
                                                 </div>
                                                 <div className="grid gap-2 text-sm text-muted-foreground">
-                                                    <div className="rounded-2xl bg-muted/50 px-4 py-3">Botão: <span className="font-semibold text-foreground">{banner.botao_texto || "Pedir agora"}</span></div>
-                                                    <div className="rounded-2xl bg-muted/50 px-4 py-3">Texto: {hydratedBanner.animacao_texto} • Mídia: {hydratedBanner.animacao_midia}{hydratedBanner.tipo_midia === "image" ? ` • Escala ${hydratedBanner.media_scale?.toFixed(2)}x` : ""}</div>
+                                                    {hydratedBanner.tipo_midia !== "banner_pronto" && <div className="rounded-2xl bg-muted/50 px-4 py-3">Botão: <span className="font-semibold text-foreground">{banner.botao_texto || "Pedir agora"}</span></div>}
+                                                    {hydratedBanner.tipo_midia !== "banner_pronto" && <div className="rounded-2xl bg-muted/50 px-4 py-3">Texto: {hydratedBanner.animacao_texto} • Mídia: {hydratedBanner.animacao_midia}{hydratedBanner.tipo_midia === "image" ? ` • Escala ${hydratedBanner.media_scale?.toFixed(2)}x` : ""}</div>}
                                                     {banner.horario_inicio && <div className="rounded-2xl bg-muted/50 px-4 py-3">Janela ativa: {banner.horario_inicio} - {banner.horario_fim || "23:59"}</div>}
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <Button variant={banner.ativo ? "outline" : "default"} className="flex-1 rounded-2xl font-bold" onClick={() => toggleStatus(banner.id, banner.ativo)}>{banner.ativo ? "Pausar" : "Ativar"}</Button>
-                                                    <Button variant="outline" size="icon" className="rounded-2xl border-orange-200 text-orange-600 hover:bg-orange-50" onClick={() => handleOpenDialog(banner)}><Pencil className="h-4 w-4" /></Button>
+                                                    <Button variant="outline" size="icon" className="rounded-2xl border-blue-200 text-[#2563eb] hover:bg-blue-50" onClick={() => handleOpenDialog(banner)}><Pencil className="h-4 w-4" /></Button>
                                                     <Button variant="ghost" size="icon" className="rounded-2xl text-zinc-500 hover:bg-red-50 hover:text-red-600" onClick={() => deleteBanner(banner.id)}><Trash2 className="h-4 w-4" /></Button>
                                                 </div>
                                             </div>
