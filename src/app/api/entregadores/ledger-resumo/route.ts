@@ -6,11 +6,19 @@ export async function GET(request: NextRequest) {
         const supabase = createServerClient()
         const searchParams = request.nextUrl.searchParams
         const entregadorId = searchParams.get('entregador_id')
+        const data = searchParams.get('data')
+
+        const dateFilter = data ? { gte: `${data}T00:00:00`, lte: `${data}T23:59:59` } : null
 
         if (entregadorId) {
+            let extratoQuery = supabase.from('view_extrato_ledger_detalhado').select('*').eq('entregador_id', entregadorId)
+            if (dateFilter) {
+                extratoQuery = extratoQuery.gte('criado_em', dateFilter.gte).lte('criado_em', dateFilter.lte)
+            }
+
             const [resumo, extratoRes] = await Promise.all([
                 supabase.from('view_resumo_ledger_detalhado').select('*').eq('entregador_id', entregadorId).maybeSingle(),
-                supabase.from('view_extrato_ledger_detalhado').select('*').eq('entregador_id', entregadorId),
+                extratoQuery,
                 supabase.from('entregadores_app').select('id, nome').eq('id', entregadorId).single(),
             ])
 
@@ -35,7 +43,7 @@ export async function GET(request: NextRequest) {
             })
         }
 
-        const { data, error } = await supabase
+        const { data: resumoData, error } = await supabase
             .from('view_resumo_ledger_detalhado')
             .select('*')
             .order('nome_entregador', { ascending: true })
@@ -44,7 +52,7 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: error.message }, { status: 500 })
         }
 
-        const resultado = (data || []).map(r => ({
+        const resultado = (resumoData || []).map(r => ({
             entregador_id: r.entregador_id,
             nome: r.nome_entregador,
             qtd_cash: Number(r.qtd_cash),

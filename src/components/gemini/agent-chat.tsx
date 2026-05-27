@@ -10,12 +10,11 @@ import {
   Minimize2, 
   Sparkles,
   Loader2,
-  ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { useChat } from "@/lib/chat-context";
 
 type Message = {
   role: "user" | "assistant";
@@ -23,7 +22,7 @@ type Message = {
 };
 
 export function GeminiAgentChat() {
-  const [isOpen, setIsOpen] = useState(false);
+  const { isOpen, setIsOpen } = useChat();
   const [isMaximized, setIsMaximized] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([
@@ -78,7 +77,7 @@ export function GeminiAgentChat() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+    <div className="fixed bottom-6 right-6 z-50">
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -86,7 +85,7 @@ export function GeminiAgentChat() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             className={cn(
-              "mb-4 overflow-hidden rounded-2xl border bg-background/80 backdrop-blur-xl shadow-2xl transition-all duration-300",
+              "overflow-hidden rounded-2xl border bg-background/80 backdrop-blur-xl shadow-2xl transition-all duration-300",
               isMaximized ? "h-[80vh] w-[90vw] md:w-[600px]" : "h-[500px] w-[350px] md:w-[400px]"
             )}
           >
@@ -156,8 +155,6 @@ export function GeminiAgentChat() {
                 </div>
 
                 <div className="p-4 bg-background/80 border-t backdrop-blur-xl shrink-0">
-
-
                   <div className="relative flex items-center gap-2">
                     <input
                       placeholder="Pergunte algo ao gerente..."
@@ -184,24 +181,6 @@ export function GeminiAgentChat() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "h-14 w-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300",
-          isOpen ? "bg-red-500 text-white rotate-90" : "bg-gradient-to-tr from-blue-600 to-purple-700 text-white"
-        )}
-      >
-        {isOpen ? <X className="h-6 w-6" /> : <Bot className="h-7 w-7" />}
-        {!isOpen && (
-            <span className="absolute -top-1 -right-1 flex h-4 w-4">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500"></span>
-            </span>
-        )}
-      </motion.button>
     </div>
   );
 }

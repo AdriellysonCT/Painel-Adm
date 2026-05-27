@@ -3,13 +3,17 @@ export const geminiTools = [
     functionDeclarations: [
       {
         name: "consultar_ledger_cash_digital",
-        description: "Retorna o resumo de entregas em dinheiro (cash) vs Pix/cartão por entregador. Mostra quanto cada entregador movimentou em dinheiro físico (coletado diretamente) vs digital, e o saldo líquido de taxas.",
+        description: "Retorna resumo completo do ledger de entregadores com split cash/online, taxas da plataforma e saldo líquido. Use para ver quanto um entregador fez em dinheiro, listar entregas de hoje, ou consultar totais gerais.",
         parameters: {
           type: "OBJECT",
           properties: {
             entregador_id: {
               type: "STRING",
               description: "Opcional: UUID do entregador para ver extrato detalhado. Se não informado, lista todos."
+            },
+            data: {
+              type: "STRING",
+              description: "Opcional: data no formato YYYY-MM-DD (ex: 2026-05-27) para filtrar entregas de um dia específico."
             }
           }
         }
@@ -119,14 +123,15 @@ const getSupabaseAdmin = () => createClient(
 );
 
 export const toolImplementations = {
-  consultar_ledger_cash_digital: async ({ entregador_id }: { entregador_id?: string }, _baseUrl?: string) => {
+  consultar_ledger_cash_digital: async ({ entregador_id, data: filtro_data }: { entregador_id?: string; data?: string }, _baseUrl?: string) => {
     const baseUrl = _baseUrl || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-    const url = entregador_id
-      ? `${baseUrl}/api/entregadores/ledger-resumo?entregador_id=${entregador_id}`
-      : `${baseUrl}/api/entregadores/ledger-resumo`;
-    const res = await fetch(url);
-    const data = await res.json();
-    return data;
+    const params = new URLSearchParams()
+    if (entregador_id) params.set('entregador_id', entregador_id)
+    if (filtro_data) params.set('data', filtro_data)
+    const query = params.toString() ? `?${params.toString()}` : ''
+    const res = await fetch(`${baseUrl}/api/entregadores/ledger-resumo${query}`);
+    const result = await res.json();
+    return result;
   },
   listar_pagamentos_pendentes: async ({ tipo }: { tipo?: string }, _baseUrl?: string) => {
     const baseUrl = _baseUrl || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
