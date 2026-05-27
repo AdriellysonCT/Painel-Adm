@@ -89,6 +89,10 @@ type Banner = {
     logo_position?: string | null
     media_focal_x?: number | null
     media_focal_y?: number | null
+    logo_offset_x?: number | null
+    logo_offset_y?: number | null
+    badge_offset_x?: number | null
+    badge_offset_y?: number | null
 }
 
 type Entity = {
@@ -130,6 +134,10 @@ type BannerDraft = {
     logo_position: LogoPosition
     media_focal_x: number
     media_focal_y: number
+    logo_offset_x: number
+    logo_offset_y: number
+    badge_offset_x: number
+    badge_offset_y: number
 }
 
 type BannerTheme = {
@@ -231,6 +239,8 @@ const LOGO_POSITIONS: { value: LogoPosition; label: string }[] = [
     { value: "center", label: "Centro" },
 ]
 
+const LOGO_BADGE_OFFSET_RANGE = { min: -80, max: 80, step: 1 }
+
 const BANNER_THEMES: BannerTheme[] = [
     { value: "orange", label: "Laranja Ninja (Premium)", gradient: "linear-gradient(135deg, #fb923c 0%, #f97316 22%, #ef4444 68%, #7c2d12 100%)", pattern: "rgba(255, 255, 255, 0.18)", orb: "radial-gradient(circle, #fb923c, transparent)", button: "bg-white text-orange-600 hover:bg-orange-50", chip: "border-white/20 bg-white/10 text-white", eyebrow: "Destaque", indicator: "from-orange-200 via-white to-red-200" },
     { value: "red", label: "Brasa Intensa", gradient: "linear-gradient(140deg, #991b1b 0%, #dc2626 35%, #ef4444 64%, #7f1d1d 100%)", pattern: "rgba(255, 255, 255, 0.16)", orb: "radial-gradient(circle, #fca5a5, transparent)", button: "bg-white text-red-700 hover:bg-red-50", chip: "border-white/20 bg-white/10 text-white", eyebrow: "Urgente", indicator: "from-rose-200 via-white to-red-300" },
@@ -279,6 +289,10 @@ const INITIAL_BANNER_STATE: BannerDraft = {
     logo_position: "top-left",
     media_focal_x: 50,
     media_focal_y: 50,
+    logo_offset_x: 0,
+    logo_offset_y: 0,
+    badge_offset_x: 0,
+    badge_offset_y: 0,
 }
 
 function resolveTheme(themeValue: string) {
@@ -314,6 +328,10 @@ function normalizeBannerDraft(draft: BannerDraft) {
         logo_position: (LOGO_POSITIONS.some(p => p.value === draft.logo_position) ? draft.logo_position : "top-left"),
         media_focal_x: clampNumber(Number(draft.media_focal_x) ?? 50, 0, 100),
         media_focal_y: clampNumber(Number(draft.media_focal_y) ?? 50, 0, 100),
+        logo_offset_x: clampNumber(Number(draft.logo_offset_x) || 0, -80, 80),
+        logo_offset_y: clampNumber(Number(draft.logo_offset_y) || 0, -80, 80),
+        badge_offset_x: clampNumber(Number(draft.badge_offset_x) || 0, -80, 80),
+        badge_offset_y: clampNumber(Number(draft.badge_offset_y) || 0, -80, 80),
     }
 }
 
@@ -474,6 +492,10 @@ function BannerShowcase({
     const mediaScale = banner.media_scale ?? 1
     const mediaOffsetX = banner.media_offset_x ?? 0
     const mediaOffsetY = banner.media_offset_y ?? 0
+    const logoOffX = (banner as any).logo_offset_x ?? 0
+    const logoOffY = (banner as any).logo_offset_y ?? 0
+    const badgeOffX = (banner as any).badge_offset_x ?? 0
+    const badgeOffY = (banner as any).badge_offset_y ?? 0
     const imageSize = compact ? 150 : 178
     const isContinuous = banner.animacao_texto_tipo === "continuous"
 
@@ -557,7 +579,7 @@ function BannerShowcase({
     }
 
     const logoEl = banner.logo_url ? (
-        <img src={banner.logo_url} alt="logo" className={`absolute ${logoPosClasses[banner.logo_position] || "top-3 left-3"} w-12 h-12 sm:w-16 sm:h-16 object-contain drop-shadow-lg z-10`} />
+        <img src={banner.logo_url} alt="logo" className={`absolute ${logoPosClasses[banner.logo_position] || "top-3 left-3"} w-12 h-12 sm:w-16 sm:h-16 object-contain drop-shadow-lg z-10`} style={{ transform: `translate(${logoOffX}px, ${logoOffY}px)` }} />
     ) : null
 
     const textContent = (
@@ -605,7 +627,7 @@ function BannerShowcase({
                 />
                 <div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${banner.overlay_opacity ?? 0.4})` }} />
                 {banner.badge_text !== "none" && badgeConfig && (
-                    <span className={`absolute ${badgePosClasses[banner.badge_position] || "top-3 right-3"} z-20 px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider ${badgeConfig.color}`}>
+                    <span className={`absolute ${badgePosClasses[banner.badge_position] || "top-3 right-3"} z-20 px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider ${badgeConfig.color}`} style={{ transform: `translate(${badgeOffX}px, ${badgeOffY}px)` }}>
                         {banner.badge_text}
                     </span>
                 )}
@@ -640,7 +662,7 @@ function BannerShowcase({
                 <div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${banner.overlay_opacity ?? 0.4})` }} />
                 <motion.div className="absolute -right-10 -top-10 h-44 w-44 rounded-full blur-3xl" style={{ background: theme.orb }} animate={{ scale: [1, 1.08, 1], opacity: [0.65, 0.95, 0.65] }} transition={{ duration: 5.2, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }} />
                 {banner.badge_text !== "none" && badgeConfig && (
-                    <span className={`absolute ${badgePosClasses[banner.badge_position] || "top-3 right-3"} z-20 px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider ${badgeConfig.color}`}>
+                    <span className={`absolute ${badgePosClasses[banner.badge_position] || "top-3 right-3"} z-20 px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider ${badgeConfig.color}`} style={{ transform: `translate(${badgeOffX}px, ${badgeOffY}px)` }}>
                         {banner.badge_text}
                     </span>
                 )}
@@ -678,7 +700,7 @@ function BannerShowcase({
                 <div className="absolute inset-0 opacity-70" style={{ backgroundImage: `radial-gradient(circle at 1px 1px, ${theme.pattern} 1px, transparent 0)`, backgroundSize: compact ? "28px 28px" : "32px 32px" }} />
                 <motion.div className="absolute -right-10 -top-10 h-44 w-44 rounded-full blur-3xl" style={{ background: theme.orb }} animate={{ scale: [1, 1.08, 1], opacity: [0.65, 0.95, 0.65] }} transition={{ duration: 5.2, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }} />
                 {banner.badge_text !== "none" && badgeConfig && (
-                    <span className={`absolute ${badgePosClasses[banner.badge_position] || "top-3 right-3"} z-20 px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider ${badgeConfig.color}`}>
+                    <span className={`absolute ${badgePosClasses[banner.badge_position] || "top-3 right-3"} z-20 px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider ${badgeConfig.color}`} style={{ transform: `translate(${badgeOffX}px, ${badgeOffY}px)` }}>
                         {banner.badge_text}
                     </span>
                 )}
@@ -720,7 +742,7 @@ function BannerShowcase({
                 <div className="absolute inset-0 opacity-70" style={{ backgroundImage: `radial-gradient(circle at 1px 1px, ${theme.pattern} 1px, transparent 0)`, backgroundSize: compact ? "28px 28px" : "32px 32px" }} />
                 <motion.div className="absolute -right-10 -top-10 h-44 w-44 rounded-full blur-3xl" style={{ background: theme.orb }} animate={{ scale: [1, 1.08, 1], opacity: [0.65, 0.95, 0.65] }} transition={{ duration: 5.2, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }} />
                 {banner.badge_text !== "none" && badgeConfig && (
-                    <span className={`absolute ${badgePosClasses[banner.badge_position] || "top-3 right-3"} z-20 px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider ${badgeConfig.color}`}>
+                    <span className={`absolute ${badgePosClasses[banner.badge_position] || "top-3 right-3"} z-20 px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider ${badgeConfig.color}`} style={{ transform: `translate(${badgeOffX}px, ${badgeOffY}px)` }}>
                         {banner.badge_text}
                     </span>
                 )}
@@ -798,7 +820,7 @@ function BannerShowcase({
             <div className={`relative z-10 flex ${isTextRight ? "flex-row-reverse" : ""} items-center w-full h-full min-h-[260px] sm:min-h-[320px] lg:min-h-[360px] px-5 py-4 gap-4 sm:px-7 sm:py-6 lg:px-9 lg:py-8`}>
                 <div className="flex-1 min-w-0">
                     {banner.badge_text !== "none" && banner.layout_type !== "hero" && badgeConfig && (
-                        <span className={`inline-block px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider mb-2 ${badgeConfig.color}`}>
+                        <span className={`inline-block px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider mb-2 ${badgeConfig.color}`} style={{ transform: `translate(${badgeOffX}px, ${badgeOffY}px)` }}>
                             {banner.badge_text}
                         </span>
                     )}
@@ -951,6 +973,10 @@ export default function BannersManagerClient() {
             logo_position: (banner as any).logo_position || "top-left",
             media_focal_x: (banner as any).media_focal_x ?? 50,
             media_focal_y: (banner as any).media_focal_y ?? 50,
+            logo_offset_x: (banner as any).logo_offset_x ?? 0,
+            logo_offset_y: (banner as any).logo_offset_y ?? 0,
+            badge_offset_x: (banner as any).badge_offset_x ?? 0,
+            badge_offset_y: (banner as any).badge_offset_y ?? 0,
         })
 
         if (banner.tipo_link === "restaurant") {
@@ -1014,6 +1040,10 @@ export default function BannersManagerClient() {
                 logo_position: payload.logo_position,
                 media_focal_x: payload.layout_type === "hero" ? payload.media_focal_x : 50,
                 media_focal_y: payload.layout_type === "hero" ? payload.media_focal_y : 50,
+                logo_offset_x: payload.logo_offset_x,
+                logo_offset_y: payload.logo_offset_y,
+                badge_offset_x: payload.badge_offset_x,
+                badge_offset_y: payload.badge_offset_y,
             }
 
             const runSave = async (savePayload: typeof fullPayload | typeof mediaPayload | typeof basePayload) => {
@@ -1545,6 +1575,20 @@ export default function BannersManagerClient() {
                                                     </Select>
                                                 </div>
                                             )}
+                                            {novoBanner.badge_text !== "none" && (
+                                                <div className="grid grid-cols-2 gap-3 mt-2">
+                                                    <div>
+                                                        <Label className="text-xs text-muted-foreground mb-1 block">Offset X do selo</Label>
+                                                        <input type="range" min={LOGO_BADGE_OFFSET_RANGE.min} max={LOGO_BADGE_OFFSET_RANGE.max} step={LOGO_BADGE_OFFSET_RANGE.step} value={novoBanner.badge_offset_x} onChange={(e) => setNovoBanner((prev) => ({ ...prev, badge_offset_x: Number(e.target.value) }))} className="w-full accent-amber-500" />
+                                                        <span className="text-xs text-muted-foreground">{novoBanner.badge_offset_x}px</span>
+                                                    </div>
+                                                    <div>
+                                                        <Label className="text-xs text-muted-foreground mb-1 block">Offset Y do selo</Label>
+                                                        <input type="range" min={LOGO_BADGE_OFFSET_RANGE.min} max={LOGO_BADGE_OFFSET_RANGE.max} step={LOGO_BADGE_OFFSET_RANGE.step} value={novoBanner.badge_offset_y} onChange={(e) => setNovoBanner((prev) => ({ ...prev, badge_offset_y: Number(e.target.value) }))} className="w-full accent-amber-500" />
+                                                        <span className="text-xs text-muted-foreground">{novoBanner.badge_offset_y}px</span>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
@@ -1655,6 +1699,20 @@ export default function BannersManagerClient() {
                                                             <SelectContent>{LOGO_POSITIONS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
                                                         </Select>
                                                     </div>
+                                                    {novoBanner.logo_url && (
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <div>
+                                                                <Label className="text-xs text-muted-foreground mb-1 block">Offset X da logo</Label>
+                                                                <input type="range" min={LOGO_BADGE_OFFSET_RANGE.min} max={LOGO_BADGE_OFFSET_RANGE.max} step={LOGO_BADGE_OFFSET_RANGE.step} value={novoBanner.logo_offset_x} onChange={(e) => setNovoBanner((prev) => ({ ...prev, logo_offset_x: Number(e.target.value) }))} className="w-full accent-violet-500" />
+                                                                <span className="text-xs text-muted-foreground">{novoBanner.logo_offset_x}px</span>
+                                                            </div>
+                                                            <div>
+                                                                <Label className="text-xs text-muted-foreground mb-1 block">Offset Y da logo</Label>
+                                                                <input type="range" min={LOGO_BADGE_OFFSET_RANGE.min} max={LOGO_BADGE_OFFSET_RANGE.max} step={LOGO_BADGE_OFFSET_RANGE.step} value={novoBanner.logo_offset_y} onChange={(e) => setNovoBanner((prev) => ({ ...prev, logo_offset_y: Number(e.target.value) }))} className="w-full accent-violet-500" />
+                                                                <span className="text-xs text-muted-foreground">{novoBanner.logo_offset_y}px</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                     <Button type="button" variant="ghost" size="icon" className="rounded-2xl text-red-500 hover:bg-red-50 hover:text-red-700" onClick={() => setNovoBanner((prev) => ({ ...prev, logo_url: "" }))}><X className="h-4 w-4" /></Button>
                                                 </div>
                                             )}
@@ -1840,6 +1898,10 @@ export default function BannersManagerClient() {
                                 logo_position: (banner as any).logo_position || "top-left",
                                 media_focal_x: (banner as any).media_focal_x ?? 50,
                                 media_focal_y: (banner as any).media_focal_y ?? 50,
+                                logo_offset_x: (banner as any).logo_offset_x ?? 0,
+                                logo_offset_y: (banner as any).logo_offset_y ?? 0,
+                                badge_offset_x: (banner as any).badge_offset_x ?? 0,
+                                badge_offset_y: (banner as any).badge_offset_y ?? 0,
                             }
 
                             return (
