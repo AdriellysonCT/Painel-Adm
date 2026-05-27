@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
           const { name, args } = call.functionCall;
           const implementation = (toolImplementations as any)[name];
           if (implementation) {
-            const data = await implementation(args);
+            const data = await implementation(args, req.nextUrl.origin);
             return {
               functionResponse: {
                 name,

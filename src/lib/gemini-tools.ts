@@ -119,8 +119,8 @@ const getSupabaseAdmin = () => createClient(
 );
 
 export const toolImplementations = {
-  consultar_ledger_cash_digital: async ({ entregador_id }: { entregador_id?: string }) => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+  consultar_ledger_cash_digital: async ({ entregador_id }: { entregador_id?: string }, _baseUrl?: string) => {
+    const baseUrl = _baseUrl || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
     const url = entregador_id
       ? `${baseUrl}/api/entregadores/ledger-resumo?entregador_id=${entregador_id}`
       : `${baseUrl}/api/entregadores/ledger-resumo`;
@@ -128,14 +128,14 @@ export const toolImplementations = {
     const data = await res.json();
     return data;
   },
-  listar_pagamentos_pendentes: async ({ tipo }: { tipo?: string }) => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+  listar_pagamentos_pendentes: async ({ tipo }: { tipo?: string }, _baseUrl?: string) => {
+    const baseUrl = _baseUrl || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
     const url = tipo ? `${baseUrl}/api/entregadores/pendentes?tipo=${tipo}` : `${baseUrl}/api/entregadores/pendentes`;
     const res = await fetch(url);
     return await res.json();
   },
-  processar_pagamento: async (params: any) => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+  processar_pagamento: async (params: any, _baseUrl?: string) => {
+    const baseUrl = _baseUrl || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
     
     const resProcessar = await fetch(`${baseUrl}/api/pagamentos/processar`, {
       method: 'POST',
@@ -154,8 +154,8 @@ export const toolImplementations = {
 
     return await resConfirmar.json();
   },
-  get_resumo_financeiro: async () => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+  get_resumo_financeiro: async (_args: unknown, _baseUrl?: string) => {
+    const baseUrl = _baseUrl || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
     const res = await fetch(`${baseUrl}/api/breakdown-financeiro`);
     return await res.json();
   },
