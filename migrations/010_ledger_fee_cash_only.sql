@@ -1,9 +1,7 @@
--- Migration 010: Inverter lógica da taxa - apenas dinheiro paga, online é zero
--- Online (Pix/Cartão): o split já acontece na hora do pagamento entre
--- restaurante e plataforma. O dinheiro do entregador já fica retido na
--- plataforma → não precisa descontar nada do entregador.
--- Dinheiro: entregador coletou diretamente do cliente → precisa acertar
--- a taxa da plataforma (R$1 ou R$2 por entrega).
+-- Migration 010: Fee baseada em valor_total (itens), não taxa_entrega
+-- Online: taxa = 0 (split no pagamento já retém o valor)
+-- Dinheiro: R$1 se valor_total < 5, R$2 se valor_total >= 5
+-- "valor_total" = valor dos itens (sem taxa de entrega)
 
 DROP VIEW IF EXISTS view_extrato_ledger_detalhado CASCADE;
 DROP VIEW IF EXISTS view_resumo_ledger_detalhado CASCADE;
@@ -23,15 +21,15 @@ SELECT
   p.metodo_pagamento,
   COALESCE(p.taxa_entrega, 0) as taxa_entrega,
   COALESCE(p.valor_total, 0) as valor_total_pedido,
-  COALESCE(p.valor_total - p.taxa_entrega, 0) as valor_item,
+  COALESCE(p.valor_total, 0) as valor_item,
   CASE
     WHEN p.metodo_pagamento IN ('pix', 'credito') THEN 'online'
     WHEN p.metodo_pagamento = 'dinheiro' THEN 'cash'
     ELSE 'indefinido'
   END as tipo_pagamento,
   CASE
-    WHEN p.metodo_pagamento = 'dinheiro' AND COALESCE(p.taxa_entrega, 0) >= 5 THEN 2.00
-    WHEN p.metodo_pagamento = 'dinheiro' AND COALESCE(p.taxa_entrega, 0) < 5 THEN 1.00
+    WHEN p.metodo_pagamento = 'dinheiro' AND COALESCE(p.valor_total, 0) >= 5 THEN 2.00
+    WHEN p.metodo_pagamento = 'dinheiro' AND COALESCE(p.valor_total, 0) < 5 THEN 1.00
     ELSE 0
   END as taxa_plataforma
 FROM ledger_lancamentos l

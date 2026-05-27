@@ -17,8 +17,8 @@ type EntregaLedger = {
   taxa_entrega: number
   tipo_pagamento: string
   taxa_plataforma: number
-  valor_total_pedido?: number
-  valor_item?: number
+  valor_total_pedido: number
+  valor_item: number
 }
 
 type EntregadorLedger = {
@@ -312,9 +312,9 @@ export default function LedgerEntregadoresClient() {
                             <tr className="border-b border-[#e2e8f0] bg-[#fafafa]">
                               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b]">Data</th>
                               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b]">Pedido</th>
-                              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b]">Total Pedido</th>
-                              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b] text-right">Valor Item</th>
+                              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b] text-right">Valor Itens</th>
                               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b] text-right">Taxa Entrega</th>
+                              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b] text-right">Total Cliente</th>
                               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#b91c1c] text-right">(-) Taxa Plataforma</th>
                               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#059669] text-right">Valor Líquido</th>
                             </tr>
@@ -324,14 +324,14 @@ export default function LedgerEntregadoresClient() {
                               <tr key={l.ledger_id} className="transition-colors hover:bg-[#fffbeb]">
                                 <td className="px-4 py-3 font-mono text-xs text-[#0b1c30]">{formatDate(l.criado_em)}</td>
                                 <td className="px-4 py-3 text-sm text-[#0b1c30]">#{l.numero_pedido}</td>
-                                <td className="px-4 py-3 font-mono text-xs text-[#64748b]">{l.valor_total_pedido ? formatCurrencyBRL(l.valor_total_pedido) : "-"}</td>
-                                <td className="px-4 py-3 text-right font-mono text-sm text-[#64748b]">{l.valor_item ? formatCurrencyBRL(l.valor_item) : "-"}</td>
+                                <td className="px-4 py-3 text-right font-mono text-sm text-[#64748b]">{formatCurrencyBRL(l.valor_item)}</td>
                                 <td className="px-4 py-3 text-right font-mono text-sm text-[#0b1c30]">{formatCurrencyBRL(l.taxa_entrega)}</td>
+                                <td className="px-4 py-3 text-right font-mono text-sm text-[#0b1c30]">{formatCurrencyBRL(l.valor_item + l.taxa_entrega)}</td>
                                 <td className="px-4 py-3 text-right">
                                   <div className="inline-flex items-center gap-1 rounded-md bg-[#fef2f2] px-2 py-0.5 text-[11px] font-bold text-[#b91c1c]">
                                     -{formatCurrencyBRL(l.taxa_plataforma)}
                                     <span className="text-[10px] text-[#64748b] font-normal">
-                                      (R${l.taxa_entrega >= 5 ? "2" : "1"} — {l.taxa_entrega >= 5 ? "≥ R$5" : "< R$5"})
+                                      (R${l.valor_item >= 5 ? "2" : "1"} — itens {l.valor_item >= 5 ? "≥ R$5" : "< R$5"})
                                     </span>
                                   </div>
                                 </td>
@@ -390,10 +390,10 @@ export default function LedgerEntregadoresClient() {
                             <tr className="border-b border-[#e2e8f0] bg-[#fafafa]">
                               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b]">Data</th>
                               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b]">Pedido</th>
-                              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b]">Total Pedido</th>
-                              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b] text-right">Valor Item</th>
-                              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b] text-right">Pagamento</th>
+                              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b] text-right">Valor Itens</th>
                               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b] text-right">Taxa Entrega</th>
+                              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b] text-right">Total Cliente</th>
+                              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#64748b] text-right">Pagamento</th>
                               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[#059669] text-right">Valor a Receber</th>
                             </tr>
                           </thead>
@@ -402,8 +402,9 @@ export default function LedgerEntregadoresClient() {
                               <tr key={l.ledger_id} className="transition-colors hover:bg-[#f0f9ff]">
                                 <td className="px-4 py-3 font-mono text-xs text-[#0b1c30]">{formatDate(l.criado_em)}</td>
                                 <td className="px-4 py-3 text-sm text-[#0b1c30]">#{l.numero_pedido}</td>
-                                <td className="px-4 py-3 font-mono text-xs text-[#64748b]">{l.valor_total_pedido ? formatCurrencyBRL(l.valor_total_pedido) : "-"}</td>
-                                <td className="px-4 py-3 text-right font-mono text-sm text-[#64748b]">{l.valor_item ? formatCurrencyBRL(l.valor_item) : "-"}</td>
+                                <td className="px-4 py-3 text-right font-mono text-sm text-[#64748b]">{formatCurrencyBRL(l.valor_item)}</td>
+                                <td className="px-4 py-3 text-right font-mono text-sm font-bold text-[#0b1c30]">{formatCurrencyBRL(l.taxa_entrega)}</td>
+                                <td className="px-4 py-3 text-right font-mono text-sm font-bold text-[#0b1c30]">{formatCurrencyBRL(l.valor_item + l.taxa_entrega)}</td>
                                 <td className="px-4 py-3 text-right">
                                   <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-bold ${
                                     l.metodo_pagamento === "pix" ? "bg-[#f0fdf4] text-[#15803d]" : "bg-[#eff6ff] text-[#2563eb]"
@@ -414,15 +415,13 @@ export default function LedgerEntregadoresClient() {
                                     {PAYMENT_LABELS[l.metodo_pagamento] || l.metodo_pagamento}
                                   </span>
                                 </td>
-                                <td className="px-4 py-3 text-right font-mono text-sm font-bold text-[#0b1c30]">{formatCurrencyBRL(l.taxa_entrega)}</td>
                                 <td className="px-4 py-3 text-right font-mono text-sm font-bold text-[#059669]">+{formatCurrencyBRL(l.valor_entrega)}</td>
                               </tr>
                             ))}
                           </tbody>
                           <tfoot className="border-t-2 border-[#bae6fd]">
                             <tr className="bg-[#f0f9ff]">
-                              <td colSpan={5} className="px-4 py-3 text-sm font-bold text-[#0b1c30]">Total Online</td>
-                              <td className="px-4 py-3 text-right font-mono text-sm font-bold text-[#0b1c30]">{formatCurrencyBRL(extratoData.resumo.total_online)}</td>
+                              <td colSpan={6} className="px-4 py-3 text-sm font-bold text-[#0b1c30]">Total Online</td>
                               <td className="px-4 py-3 text-right font-mono text-sm font-bold text-[#059669]">{formatCurrencyBRL(extratoData.resumo.total_online)}</td>
                             </tr>
                           </tfoot>
